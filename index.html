@@ -82,7 +82,7 @@
     }
     .header-meta { display: flex; justify-content: space-between; align-items: center; }
     .header-date {
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--text-mid);
@@ -91,7 +91,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.78rem;
+      font-size: 0.95rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--text-dim);
@@ -111,14 +111,14 @@
     .col-heads {
       display: grid;
       grid-template-columns: 105px 1fr 140px 82px;
-      padding: 13px 48px;
+      padding: 16px 48px;
       background: var(--bg2);
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     .col-head {
-      font-size: 0.72rem;
+      font-size: 0.88rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--gold);
@@ -146,27 +146,32 @@
     .list-panel::-webkit-scrollbar-thumb { background: var(--gold-line); }
     .list-panel.hidden { opacity: 0; pointer-events: none; }
 
-    /* Day group */
+    /* Day group — flex value set per-group by JS, proportional to row count */
     .day-group {
       display: flex;
       flex-direction: column;
-      flex-shrink: 0;
+      min-height: 0;
     }
 
-    /* Rows wrapper */
+    /* Rows wrapper — grows to fill day-group height */
     .rows-wrap {
       display: flex;
       flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
 
-    /* Class row — fixed padding, no stretching */
+    /* Class row — stretches to fill available height */
     .class-row {
       display: grid;
       grid-template-columns: 105px 1fr 140px 82px;
-      padding: 20px 48px;
+      padding: 12px 48px;
       border-bottom: 1px solid var(--border);
       position: relative;
       animation: fadeUp 0.4s ease both;
+      flex: 1;
+      min-height: 64px;
+      align-items: center;
     }
     .day-divider {
       display: flex;
@@ -178,7 +183,7 @@
       flex-shrink: 0;
     }
     .day-divider-label {
-      font-size: 0.72rem;
+      font-size: 0.88rem;
       letter-spacing: 0.22em;
       text-transform: uppercase;
       color: var(--gold);
@@ -204,19 +209,19 @@
 
     /* Time cell */
     .time-start {
-      font-size: 1.15rem;
+      font-size: 1.4rem;
       font-weight: 400;
       color: var(--gold);
       line-height: 1.2;
     }
-    .time-end { font-size: 0.78rem; color: var(--text-dim); margin-top: 5px; }
+    .time-end { font-size: 0.95rem; color: var(--text-dim); margin-top: 5px; }
 
     .now-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       margin-top: 7px;
-      font-size: 0.65rem;
+      font-size: 0.8rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--gold);
@@ -235,12 +240,12 @@
     /* Class info */
     .class-info { padding-right: 12px; }
     .class-name {
-      font-size: 1.15rem;
+      font-size: 1.4rem;
       font-weight: 400;
       color: var(--text);
       line-height: 1.3;
     }
-    .class-zone { font-size: 0.72rem; color: var(--text-dim); margin-top: 6px; }
+    .class-zone { font-size: 0.88rem; color: var(--text-dim); margin-top: 6px; }
     .class-zone span {
       display: inline-block;
       background: rgba(200,168,75,0.07);
@@ -251,7 +256,7 @@
     }
 
     .class-instructor {
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       color: var(--text-mid);
       padding-right: 10px;
       line-height: 1.5;
@@ -259,19 +264,19 @@
     }
 
     .class-spots { text-align: right; }
-    .spots-num { font-size: 1.5rem; font-weight: 500; line-height: 1; }
+    .spots-num { font-size: 1.85rem; font-weight: 500; line-height: 1; }
     .spots-num.open { color: #7BBF90; }
     .spots-num.low  { color: #C9A870; }
     .spots-num.full { color: #C97070; }
     .spots-lbl {
-      font-size: 0.6rem;
+      font-size: 0.75rem;
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.12em;
       margin-top: 5px;
     }
     .spots-open-text {
-      font-size: 0.72rem;
+      font-size: 0.88rem;
       color: #7BBF90;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -286,7 +291,7 @@
       position: absolute;
       inset: 0;
       color: var(--text-dim);
-      font-size: 0.9rem;
+      font-size: 1.1rem;
       letter-spacing: 0.1em;
     }
 
@@ -300,12 +305,12 @@
       flex-shrink: 0;
     }
     .footer-left {
-      font-size: 0.7rem;
+      font-size: 0.85rem;
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--text-dim);
     }
-    .footer-right { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 0.06em; }
+    .footer-right { font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.06em; }
   </style>
 </head>
 <body>
@@ -461,10 +466,10 @@
     let activePanel = 'a';
     let firstLoad = true;
 
-    // Estimate row height in px (padding 20px top+bottom + ~40px content = ~80px)
-    // Plus day divider ~48px. Used to decide how many days to show.
-    const ROW_H     = 80;
-    const DIVIDER_H = 48;
+    // Estimate row height in px — larger fonts mean taller rows (~105px).
+    // Used to decide how many days to show; CSS flex fills any remaining space.
+    const ROW_H     = 105;
+    const DIVIDER_H = 55;
 
     function groupByDay(classes) {
       const map = new Map();
@@ -492,7 +497,7 @@
 
       // Keep adding days until we fill the screen
       let html = '';
-      let usedH = 160 + 46 + 52; // chrome height
+      let usedH = 290; // chrome height: header ~195 + col-heads ~50 + footer ~50 - overlap
       let daysUsed = 0;
 
       const today    = brisbaneMidnight(now);
@@ -512,7 +517,7 @@
 
         const isFuture = labelDate > today;
 
-        html += `<div class="day-group">
+        html += `<div class="day-group" style="flex:${day.rows.length}">
           <div class="day-divider">
             <span class="day-divider-label">${label}</span>
             <span class="day-divider-line"></span>
