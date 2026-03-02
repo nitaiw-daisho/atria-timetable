@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atria Wellness Club – Class Timetable</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@perfectgym/client-portal@latest/dist/ClientPortal.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #fff; }
+    #pg-client-portal { width: 100%; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="pg-client-portal"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@iframe-resizer/parent@5.5.7/index.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@perfectgym/client-portal@latest/dist/ClientPortal.min.js"></script>
+  <script>
+    window.onload = function () {
+      var ClientPortal = window.PerfectGym.ClientPortal;
+      var el = document.getElementById('pg-client-portal');
+      var options = {
+        url: "https://atriawellnessclub.perfectgym.com.au/ClientPortal2/",
+        forceUrl: "https://atriawellnessclub.perfectgym.com.au/ClientPortal2/#/Classes/1/List"
+      };
+      new ClientPortal(el, options);
+    };
+  </script>
+</body>
+</html>
