@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atria Wellness Club – Today's Classes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg:        #0D0D0D;
@@ -16,6 +15,7 @@
       --text-mid:  rgba(242,238,230,0.6);
       --text-dim:  rgba(242,238,230,0.35);
       --border:    rgba(242,238,230,0.08);
+      --font: 'Century Gothic', 'Trebuchet MS', 'Gill Sans', sans-serif;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -24,7 +24,7 @@
       width: 100%; height: 100%;
       background: var(--bg);
       color: var(--text);
-      font-family: 'Barlow', sans-serif;
+      font-family: var(--font);
       font-weight: 300;
       overflow: hidden;
     }
@@ -36,25 +36,25 @@
       align-items: center;
       justify-content: center;
       height: 100vh;
-      gap: 20px;
-      padding: 40px;
+      gap: 24px;
+      padding: 60px;
       text-align: center;
     }
 
-    .screen img { width: 150px; filter: brightness(1.1); }
+    .screen img { width: 200px; filter: brightness(1.1); }
 
     .screen p {
-      font-size: 0.72rem;
+      font-size: 0.85rem;
       letter-spacing: 0.1em;
       color: var(--text-dim);
-      max-width: 280px;
+      max-width: 320px;
       line-height: 1.8;
     }
 
-    .sep { width: 40px; height: 1px; background: var(--gold); opacity: 0.5; }
+    .sep { width: 48px; height: 1px; background: var(--gold); opacity: 0.5; }
 
     .spinner {
-      width: 22px; height: 22px;
+      width: 28px; height: 28px;
       border: 1px solid var(--border);
       border-top-color: var(--gold);
       border-radius: 50%;
@@ -72,20 +72,23 @@
     }
 
     /* Header */
-    .header { padding: 30px 28px 22px; flex-shrink: 0; }
+    .header {
+      padding: 40px 44px 28px;
+      flex-shrink: 0;
+    }
 
     .header img {
-      width: 130px;
+      width: 180px;
       display: block;
-      margin-bottom: 16px;
+      margin-bottom: 22px;
       filter: brightness(1.1);
     }
 
     .header-rule {
       height: 1px;
-      background: linear-gradient(90deg, var(--gold) 0%, transparent 65%);
+      background: linear-gradient(90deg, var(--gold) 0%, transparent 60%);
       opacity: 0.45;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
 
     .header-meta {
@@ -95,8 +98,8 @@
     }
 
     .header-date {
-      font-size: 0.67rem;
-      letter-spacing: 0.15em;
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--text-mid);
     }
@@ -104,15 +107,15 @@
     .live {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.6rem;
-      letter-spacing: 0.18em;
+      gap: 8px;
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--text-dim);
     }
 
     .live-dot {
-      width: 6px; height: 6px;
+      width: 7px; height: 7px;
       background: var(--gold);
       border-radius: 50%;
       animation: pulse 2.5s ease-in-out infinite;
@@ -126,8 +129,8 @@
     /* Column headers */
     .col-heads {
       display: grid;
-      grid-template-columns: 68px 1fr 95px 68px;
-      padding: 8px 28px;
+      grid-template-columns: 90px 1fr 130px 80px;
+      padding: 12px 44px;
       background: var(--bg2);
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
@@ -135,10 +138,11 @@
     }
 
     .col-head {
-      font-size: 0.57rem;
-      letter-spacing: 0.18em;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--gold);
+      font-weight: 400;
     }
 
     /* Class rows */
@@ -149,8 +153,8 @@
 
     .class-row {
       display: grid;
-      grid-template-columns: 68px 1fr 95px 68px;
-      padding: 14px 28px;
+      grid-template-columns: 90px 1fr 130px 80px;
+      padding: 20px 44px;
       border-bottom: 1px solid var(--border);
       position: relative;
       animation: fadeUp 0.3s ease both;
@@ -161,45 +165,51 @@
       content: '';
       position: absolute;
       left: 0; top: 0; bottom: 0;
-      width: 2px;
+      width: 3px;
       background: var(--gold);
     }
 
-    .class-row.past { opacity: 0.28; }
+    .class-row.past { opacity: 0.25; }
 
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(5px); }
+      from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     .time-start {
-      font-size: 0.88rem;
+      font-size: 1rem;
       font-weight: 400;
       color: var(--gold);
       line-height: 1.2;
     }
 
-    .time-end { font-size: 0.6rem; color: var(--text-dim); margin-top: 3px; }
+    .time-end {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
 
     .class-name {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.08rem;
+      font-size: 1rem;
+      font-weight: 400;
       color: var(--text);
-      line-height: 1.2;
-      padding-right: 8px;
+      line-height: 1.3;
+      padding-right: 12px;
+      align-self: center;
     }
 
     .class-instructor {
-      font-size: 0.74rem;
+      font-size: 0.82rem;
       color: var(--text-mid);
       align-self: center;
-      padding-right: 6px;
+      padding-right: 8px;
       line-height: 1.4;
+      font-weight: 300;
     }
 
     .class-spots { text-align: right; align-self: center; }
 
-    .spots-num { font-size: 1.05rem; font-weight: 500; line-height: 1; }
+    .spots-num { font-size: 1.3rem; font-weight: 500; line-height: 1; }
     .spots-num.open { color: #7BBF90; }
     .spots-num.low  { color: #C9A870; }
     .spots-num.full { color: #C97070; }
@@ -208,8 +218,8 @@
       font-size: 0.55rem;
       color: var(--text-dim);
       text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-top: 3px;
+      letter-spacing: 0.12em;
+      margin-top: 4px;
     }
 
     .list-state {
@@ -217,16 +227,16 @@
       align-items: center;
       justify-content: center;
       flex-direction: column;
-      gap: 12px;
-      height: 160px;
+      gap: 16px;
+      height: 200px;
       color: var(--text-dim);
-      font-size: 0.75rem;
-      letter-spacing: 0.08em;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
     }
 
     /* Footer */
     .footer {
-      padding: 10px 28px;
+      padding: 16px 44px;
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
@@ -235,25 +245,29 @@
     }
 
     .footer-left {
-      font-size: 0.58rem;
-      letter-spacing: 0.14em;
+      font-size: 0.62rem;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--text-dim);
     }
 
-    .footer-right { font-size: 0.58rem; color: var(--text-dim); letter-spacing: 0.05em; }
+    .footer-right {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
+    }
   </style>
 </head>
 <body>
 
-  <!-- Loading screen -->
+  <!-- Loading -->
   <div id="loading" class="screen">
     <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
     <div class="spinner"></div>
     <p>Loading today's schedule...</p>
   </div>
 
-  <!-- Error screen -->
+  <!-- Error -->
   <div id="error-screen" class="screen" style="display:none;">
     <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
     <div class="sep"></div>
@@ -288,12 +302,9 @@
     </div>
   </div>
 
-
   <script>
-    // ── Config ──────────────────────────────────────────────────
-    const WORKER_URL  = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
+    const WORKER_URL   = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
     const REFRESH_MINS = 5;
-    // ────────────────────────────────────────────────────────────
 
     const fmt = iso => new Date(iso).toLocaleTimeString('en-AU', {
       hour: '2-digit', minute: '2-digit', hour12: true
@@ -318,11 +329,11 @@
     }
 
     async function loadClasses() {
-      const now   = new Date();
-
-      // Build Brisbane-offset date strings for the Worker
+      const now = new Date();
       const pad = n => String(n).padStart(2, '0');
-      const bne = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+10:00`;
+      const bne = d =>
+        `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` +
+        `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+10:00`;
 
       const start = new Date(now); start.setHours(0, 0, 0, 0);
       const end   = new Date(now); end.setHours(23, 59, 59, 0);
@@ -334,7 +345,6 @@
 
       try {
         const res = await fetch(`${WORKER_URL}?${params}`);
-
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
@@ -342,10 +352,10 @@
 
         const data = await res.json();
 
-        // v2.2 OData returns results in data.value array
-        // Filter out deleted classes and sort by start time
-        const classes = (data.value || [])
-          .filter(c => !c.isDeleted && !c.classType?.isDeleted);
+        // Show ALL classes — no isDeleted filtering
+        // The isDeleted flag on class instances appears to be a PG draft flag,
+        // not a cancellation. Only skip if classType is missing entirely.
+        const classes = (data.value || []).filter(c => c.classType);
 
         renderClasses(classes, now);
         document.getElementById('footer-time').textContent = `Updated ${fmt(now.toISOString())}`;
@@ -370,7 +380,6 @@
         return;
       }
 
-      // Sort by start time
       classes.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
       list.innerHTML = classes.map((c, i) => {
@@ -379,43 +388,37 @@
         const isNow  = now >= start && now <= end;
         const isPast = now > end;
 
-        // Spots available
         const limit = c.attendeesLimit || 0;
         const taken = c.attendeesCount || 0;
         const left  = Math.max(0, limit - taken);
         const spotsClass = limit === 0 ? '' : left === 0 ? 'full' : left <= 3 ? 'low' : 'open';
 
-        // Instructor name — handle null instructor gracefully
         const instructor = c.instructor
           ? `${c.instructor.firstName} ${c.instructor.lastName}`.trim()
           : '—';
 
-        // Class name from classType
         const name = c.classType?.name || 'Class';
 
         return `
           <div class="class-row ${isNow ? 'now' : isPast ? 'past' : ''}"
-               style="animation-delay:${i * 0.03}s">
+               style="animation-delay:${i * 0.04}s">
             <div>
               <div class="time-start">${fmt(c.startDate)}</div>
               <div class="time-end">${fmt(c.endDate)}</div>
             </div>
-            <div>
-              <div class="class-name">${name}</div>
-            </div>
+            <div class="class-name">${name}</div>
             <div class="class-instructor">${instructor}</div>
             <div class="class-spots">
               ${limit
                 ? `<div class="spots-num ${spotsClass}">${left}</div>
                    <div class="spots-lbl">spots</div>`
-                : `<div class="spots-lbl" style="margin-top:6px">Open</div>`
+                : `<div class="spots-lbl" style="margin-top:8px">Open</div>`
               }
             </div>
           </div>`;
       }).join('');
     }
 
-    // Start and auto-refresh
     loadClasses();
     setInterval(loadClasses, REFRESH_MINS * 60 * 1000);
   </script>
