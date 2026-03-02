@@ -164,7 +164,8 @@
     /* Class row — stretches to fill available height */
     .class-row {
       display: grid;
-      grid-template-columns: 105px 1fr 140px 82px;
+      grid-template-columns: 130px 1fr 140px 90px;
+      column-gap: 16px;
       padding: 12px 48px;
       border-bottom: 1px solid var(--border);
       position: relative;
@@ -192,7 +193,12 @@
     }
     .day-divider-line { flex: 1; height: 1px; background: var(--border); }
 
-    .class-row.now { background: var(--gold-dim); }
+    .class-row.now {
+      background: var(--gold-dim);
+      align-items: start;
+      padding-top: 18px;
+      padding-bottom: 18px;
+    }
     .class-row.now::before {
       content: '';
       position: absolute;
