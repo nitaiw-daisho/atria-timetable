@@ -145,15 +145,27 @@
     .list-panel::-webkit-scrollbar-thumb { background: var(--gold-line); }
     .list-panel.hidden { opacity: 0; pointer-events: none; }
 
-    /* Day group — flex column, grows to fill available space */
+    /* Day group */
     .day-group {
       display: flex;
       flex-direction: column;
-      flex: 1;
-      min-height: 0;
+      flex-shrink: 0;
     }
 
-    /* Day divider */
+    /* Rows wrapper */
+    .rows-wrap {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Class row — fixed padding, no stretching */
+    .class-row {
+      display: grid;
+      grid-template-columns: 105px 1fr 140px 82px;
+      padding: 20px 48px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
     .day-divider {
       display: flex;
       align-items: center;
@@ -173,26 +185,6 @@
     }
     .day-divider-line { flex: 1; height: 1px; background: var(--border); }
 
-    /* Rows wrapper — flex, rows share available height equally */
-    .rows-wrap {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-
-    /* Class row — grows to fill space */
-    .class-row {
-      display: grid;
-      grid-template-columns: 105px 1fr 140px 82px;
-      padding: 0 48px;
-      border-bottom: 1px solid var(--border);
-      position: relative;
-      animation: fadeUp 0.4s ease both;
-      flex: 1;
-      align-items: center;
-      /* min height so rows never get too squished with many classes */
-      min-height: 72px;
-    }
     .class-row.now { background: var(--gold-dim); }
     .class-row.now::before {
       content: '';
@@ -401,13 +393,14 @@
     async function loadClasses() {
       const now = new Date();
       const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
-      const tmrwEnd    = new Date(now);
-      tmrwEnd.setDate(tmrwEnd.getDate() + 1);
-      tmrwEnd.setHours(23, 59, 59, 0);
+      // Fetch a full week ahead so we always have enough days to fill the screen
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      weekEnd.setHours(23, 59, 59, 0);
 
       const params = new URLSearchParams({
         startDate: bne(todayStart),
-        endDate:   bne(tmrwEnd),
+        endDate:   bne(weekEnd),
       });
 
       try {
@@ -449,57 +442,87 @@
     let activePanel = 'a';
     let firstLoad = true;
 
+    // Estimate row height in px (padding 20px top+bottom + ~40px content = ~80px)
+    // Plus day divider ~48px. Used to decide how many days to show.
+    const ROW_H     = 80;
+    const DIVIDER_H = 48;
+
+    function estimateHeight(rowCount) {
+      // header ~160px, col-heads ~46px, footer ~52px
+      const chrome = 160 + 46 + 52;
+      return chrome + DIVIDER_H + rowCount * ROW_H;
+    }
+
+    function groupByDay(classes) {
+      const map = new Map();
+      for (const c of classes) {
+        const d = new Date(c.startDate);
+        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        if (!map.has(key)) map.set(key, { date: new Date(d.setHours(0,0,0,0)), rows: [] });
+        map.get(key).rows.push(c);
+      }
+      return Array.from(map.values()).sort((a, b) => a.date - b.date);
+    }
+
     function renderClasses(now) {
-      const today    = new Date(now);
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      const screenH = window.innerHeight || 1080;
 
-      const visible      = cachedClasses.filter(c => new Date(c.endDate) > now);
-      const todayClasses = visible.filter(c => isSameDay(new Date(c.startDate), today));
-      const tmrwClasses  = visible.filter(c => isSameDay(new Date(c.startDate), tomorrow));
+      // Drop classes that have already ended
+      const visible = cachedClasses.filter(c => new Date(c.endDate) > now);
 
-      let html = '';
-
-      if (!todayClasses.length && !tmrwClasses.length) {
-        html = '<div class="list-state"><span>No upcoming classes today</span></div>';
-      } else {
-        if (todayClasses.length) {
-          html += `<div class="day-group">
-            <div class="day-divider">
-              <span class="day-divider-label">Today · ${fmtDateShort(today)}</span>
-              <span class="day-divider-line"></span>
-            </div>
-            <div class="rows-wrap">
-              ${todayClasses.map((c, i) => renderRow(c, i, now, false, firstLoad)).join('')}
-            </div>
-          </div>`;
-        }
-        if (tmrwClasses.length) {
-          html += `<div class="day-group">
-            <div class="day-divider">
-              <span class="day-divider-label">Tomorrow · ${fmtDateShort(tomorrow)}</span>
-              <span class="day-divider-line"></span>
-            </div>
-            <div class="rows-wrap">
-              ${tmrwClasses.map((c, i) => renderRow(c, i, now, true, firstLoad)).join('')}
-            </div>
-          </div>`;
-        }
+      if (!visible.length) {
+        swapPanel('<div class="list-state"><span>No upcoming classes scheduled</span></div>');
+        return;
       }
 
-      // Write into the hidden (inactive) panel, then crossfade
+      const days = groupByDay(visible);
+
+      // Keep adding days until we fill the screen
+      let html = '';
+      let usedH = 160 + 46 + 52; // chrome height
+      let daysUsed = 0;
+
+      for (const day of days) {
+        const dayH = DIVIDER_H + day.rows.length * ROW_H;
+        // Always show at least 1 day; keep adding while there's space
+        if (daysUsed > 0 && usedH + dayH > screenH) break;
+
+        const labelDate = day.date;
+        const today     = new Date(now); today.setHours(0,0,0,0);
+        const tomorrow  = new Date(today); tomorrow.setDate(today.getDate() + 1);
+
+        let label;
+        if (labelDate.getTime() === today.getTime())     label = `Today · ${fmtDateShort(labelDate)}`;
+        else if (labelDate.getTime() === tomorrow.getTime()) label = `Tomorrow · ${fmtDateShort(labelDate)}`;
+        else label = fmtDateShort(labelDate);
+
+        const isFuture = labelDate > today;
+
+        html += `<div class="day-group">
+          <div class="day-divider">
+            <span class="day-divider-label">${label}</span>
+            <span class="day-divider-line"></span>
+          </div>
+          <div class="rows-wrap">
+            ${day.rows.map((c, i) => renderRow(c, i, now, isFuture, firstLoad)).join('')}
+          </div>
+        </div>`;
+
+        usedH += dayH;
+        daysUsed++;
+      }
+
+      swapPanel(html);
+    }
+
+    function swapPanel(html) {
       const inPanel  = activePanel === 'a' ? 'panel-b' : 'panel-a';
       const outPanel = activePanel === 'a' ? 'panel-a' : 'panel-b';
-
       const inEl  = document.getElementById(inPanel);
       const outEl = document.getElementById(outPanel);
-
       inEl.innerHTML = html;
-
-      // Fade in new, fade out old
       inEl.classList.remove('hidden');
       outEl.classList.add('hidden');
-
       activePanel = activePanel === 'a' ? 'b' : 'a';
       firstLoad = false;
     }
