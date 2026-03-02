@@ -124,6 +124,7 @@
       color: var(--gold);
       font-weight: 400;
     }
+    .col-head.right { text-align: right; }
 
     /* List area — flex so rows can grow to fill */
     #classes-list {
@@ -165,6 +166,7 @@
       padding: 20px 48px;
       border-bottom: 1px solid var(--border);
       position: relative;
+      animation: fadeUp 0.4s ease both;
     }
     .day-divider {
       display: flex;
@@ -334,7 +336,7 @@
       <div class="col-head">Time</div>
       <div class="col-head">Class</div>
       <div class="col-head">Instructor</div>
-      <div class="col-head" style="text-align:right">Spots</div>
+      <div class="col-head right">Spots</div>
     </div>
 
     <div id="classes-list">
@@ -349,30 +351,33 @@
   </div>
 
   <script>
-    const WORKER_URL   = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
-    const REFRESH_MINS = 5;
-    const TICK_SECS    = 30;
+    const WORKER_URL          = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
+    const REFRESH_MINS        = 5;
+    const TICK_SECS           = 30;
+    const LOW_SPOTS_THRESHOLD = 3;
 
     const pad = n => String(n).padStart(2, '0');
-    const bne = d =>
-      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` +
-      `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+10:00`;
+
+    // Format a Date as a Brisbane-timezone ISO 8601 string for API queries
+    function bne(d) {
+      const p = new Intl.DateTimeFormat('en', {
+        timeZone: 'Australia/Brisbane',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hourCycle: 'h23'
+      }).formatToParts(d).reduce((acc, { type, value }) => ({ ...acc, [type]: value }), {});
+      return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}+10:00`;
+    }
 
     const fmt = iso => new Date(iso).toLocaleTimeString('en-AU', {
-      hour: '2-digit', minute: '2-digit', hour12: true
+      timeZone: 'Australia/Brisbane', hour: '2-digit', minute: '2-digit', hour12: true
     });
     const fmtDate = d => d.toLocaleDateString('en-AU', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+      timeZone: 'Australia/Brisbane', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
     const fmtDateShort = d => d.toLocaleDateString('en-AU', {
-      weekday: 'long', day: 'numeric', month: 'long'
+      timeZone: 'Australia/Brisbane', weekday: 'long', day: 'numeric', month: 'long'
     });
-
-    function isSameDay(a, b) {
-      return a.getFullYear() === b.getFullYear() &&
-             a.getMonth()    === b.getMonth()    &&
-             a.getDate()     === b.getDate();
-    }
 
     function showError(msg) {
       document.getElementById('loading').style.display      = 'none';
@@ -404,7 +409,7 @@
       });
 
       try {
-        const res = await fetch(`${WORKER_URL}?${params}`);
+        const res = await fetch(`${WORKER_URL}?${params}`, { signal: AbortSignal.timeout(10000) });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || `HTTP ${res.status}`);
@@ -433,8 +438,9 @@
 
     function tick() {
       if (document.getElementById('app').style.display === 'flex') {
-        renderClasses(new Date());
-        document.getElementById('header-date').textContent = fmtDate(new Date());
+        const now = new Date();
+        renderClasses(now);
+        document.getElementById('header-date').textContent = fmtDate(now);
       }
     }
 
@@ -447,17 +453,11 @@
     const ROW_H     = 80;
     const DIVIDER_H = 48;
 
-    function estimateHeight(rowCount) {
-      // header ~160px, col-heads ~46px, footer ~52px
-      const chrome = 160 + 46 + 52;
-      return chrome + DIVIDER_H + rowCount * ROW_H;
-    }
-
     function groupByDay(classes) {
       const map = new Map();
       for (const c of classes) {
         const d = new Date(c.startDate);
-        const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        const key = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
         if (!map.has(key)) map.set(key, { date: new Date(d.setHours(0,0,0,0)), rows: [] });
         map.get(key).rows.push(c);
       }
@@ -492,7 +492,7 @@
         const tomorrow  = new Date(today); tomorrow.setDate(today.getDate() + 1);
 
         let label;
-        if (labelDate.getTime() === today.getTime())     label = `Today · ${fmtDateShort(labelDate)}`;
+        if (labelDate.getTime() === today.getTime())         label = `Today · ${fmtDateShort(labelDate)}`;
         else if (labelDate.getTime() === tomorrow.getTime()) label = `Tomorrow · ${fmtDateShort(labelDate)}`;
         else label = fmtDateShort(labelDate);
 
@@ -527,10 +527,10 @@
       firstLoad = false;
     }
 
-    function renderRow(c, i, now, isTomorrow, animate) {
+    function renderRow(c, i, now, isFuture, animate) {
       const start = new Date(c.startDate);
       const end   = new Date(c.endDate);
-      const isNow = !isTomorrow && now >= start && now < end;
+      const isNow = !isFuture && now >= start && now < end;
 
       const limit = c.attendeesLimit || 0;
       const taken = c.attendeesCount || 0;
@@ -542,7 +542,7 @@
 
       const name = c.classType?.name || 'Class';
       const zone = c.clubZone?.name || c.clubZone?.shortName || null;
-      const rowClass = isNow ? 'now' : isTomorrow ? 'tomorrow' : '';
+      const rowClass = isNow ? 'now' : isFuture ? 'tomorrow' : '';
 
       const timeCell = isNow
         ? `<div class="time-start">${fmt(c.startDate)}</div>
@@ -556,7 +556,7 @@
       } else if (left === 0) {
         spotsHtml = `<div class="spots-num full">Full</div>`;
       } else {
-        const spotsClass = left <= 3 ? 'low' : 'open';
+        const spotsClass = left <= LOW_SPOTS_THRESHOLD ? 'low' : 'open';
         spotsHtml = `<div class="spots-num ${spotsClass}">${left}</div>
                      <div class="spots-lbl">spots</div>`;
       }
