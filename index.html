@@ -58,6 +58,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Main app ── */
     #app {
       display: none;
       flex-direction: column;
@@ -65,6 +66,7 @@
       overflow: hidden;
     }
 
+    /* Header */
     .header { padding: 36px 48px 24px; flex-shrink: 0; }
     .header img {
       width: 200px;
@@ -105,6 +107,7 @@
       50%       { opacity: 0.3; }
     }
 
+    /* Column headers */
     .col-heads {
       display: grid;
       grid-template-columns: 105px 1fr 140px 82px;
@@ -122,10 +125,35 @@
       font-weight: 400;
     }
 
-    #classes-list { flex: 1; overflow-y: auto; }
-    #classes-list::-webkit-scrollbar { width: 2px; }
-    #classes-list::-webkit-scrollbar-thumb { background: var(--gold-line); }
+    /* List area — flex so rows can grow to fill */
+    #classes-list {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
 
+    /* Two panels crossfade between each other */
+    .list-panel {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: opacity 0.6s ease;
+    }
+    .list-panel::-webkit-scrollbar { width: 2px; }
+    .list-panel::-webkit-scrollbar-thumb { background: var(--gold-line); }
+    .list-panel.hidden { opacity: 0; pointer-events: none; }
+
+    /* Day group — flex column, grows to fill available space */
+    .day-group {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Day divider */
     .day-divider {
       display: flex;
       align-items: center;
@@ -133,9 +161,7 @@
       padding: 16px 48px 12px;
       background: var(--bg3);
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 2;
+      flex-shrink: 0;
     }
     .day-divider-label {
       font-size: 0.72rem;
@@ -147,13 +173,25 @@
     }
     .day-divider-line { flex: 1; height: 1px; background: var(--border); }
 
+    /* Rows wrapper — flex, rows share available height equally */
+    .rows-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* Class row — grows to fill space */
     .class-row {
       display: grid;
       grid-template-columns: 105px 1fr 140px 82px;
-      padding: 20px 48px;
+      padding: 0 48px;
       border-bottom: 1px solid var(--border);
       position: relative;
       animation: fadeUp 0.4s ease both;
+      flex: 1;
+      align-items: center;
+      /* min height so rows never get too squished with many classes */
+      min-height: 72px;
     }
     .class-row.now { background: var(--gold-dim); }
     .class-row.now::before {
@@ -170,6 +208,7 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* Time cell */
     .time-start {
       font-size: 1.15rem;
       font-weight: 400;
@@ -199,7 +238,8 @@
       animation: pulse 1.5s ease-in-out infinite;
     }
 
-    .class-info { padding-right: 12px; align-self: center; }
+    /* Class info */
+    .class-info { padding-right: 12px; }
     .class-name {
       font-size: 1.15rem;
       font-weight: 400;
@@ -219,13 +259,12 @@
     .class-instructor {
       font-size: 0.9rem;
       color: var(--text-mid);
-      align-self: center;
       padding-right: 10px;
       line-height: 1.5;
       font-weight: 300;
     }
 
-    .class-spots { text-align: right; align-self: center; }
+    .class-spots { text-align: right; }
     .spots-num { font-size: 1.5rem; font-weight: 500; line-height: 1; }
     .spots-num.open { color: #7BBF90; }
     .spots-num.low  { color: #C9A870; }
@@ -237,7 +276,12 @@
       letter-spacing: 0.12em;
       margin-top: 5px;
     }
-    .spots-open-text { font-size: 0.72rem; color: #7BBF90; letter-spacing: 0.08em; text-transform: uppercase; }
+    .spots-open-text {
+      font-size: 0.72rem;
+      color: #7BBF90;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
 
     .list-state {
       display: flex;
@@ -245,12 +289,14 @@
       justify-content: center;
       flex-direction: column;
       gap: 18px;
-      height: 220px;
+      position: absolute;
+      inset: 0;
       color: var(--text-dim);
       font-size: 0.9rem;
       letter-spacing: 0.1em;
     }
 
+    /* Footer */
     .footer {
       padding: 16px 48px;
       border-top: 1px solid var(--border);
@@ -300,7 +346,8 @@
     </div>
 
     <div id="classes-list">
-      <div class="list-state"><div class="spinner"></div></div>
+      <div id="panel-a" class="list-panel"></div>
+      <div id="panel-b" class="list-panel hidden"></div>
     </div>
 
     <div class="footer">
@@ -371,7 +418,6 @@
         }
         const data = await res.json();
 
-        // Only show classes that are NOT deleted — matches what PG calendar shows
         cachedClasses = (data.value || []).filter(c =>
           c.classType &&
           c.isDeleted === false &&
@@ -393,14 +439,17 @@
     }
 
     function tick() {
-      if (cachedClasses.length && document.getElementById('app').style.display === 'flex') {
+      if (document.getElementById('app').style.display === 'flex') {
         renderClasses(new Date());
         document.getElementById('header-date').textContent = fmtDate(new Date());
       }
     }
 
+    // Track which panel is currently visible
+    let activePanel = 'a';
+    let firstLoad = true;
+
     function renderClasses(now) {
-      const list     = document.getElementById('classes-list');
       const today    = new Date(now);
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -409,33 +458,53 @@
       const todayClasses = visible.filter(c => isSameDay(new Date(c.startDate), today));
       const tmrwClasses  = visible.filter(c => isSameDay(new Date(c.startDate), tomorrow));
 
-      if (!todayClasses.length && !tmrwClasses.length) {
-        list.innerHTML = '<div class="list-state"><span>No upcoming classes today</span></div>';
-        return;
-      }
-
       let html = '';
 
-      if (todayClasses.length) {
-        html += `<div class="day-divider">
-          <span class="day-divider-label">Today · ${fmtDateShort(today)}</span>
-          <span class="day-divider-line"></span>
-        </div>`;
-        html += todayClasses.map((c, i) => renderRow(c, i, now, false)).join('');
+      if (!todayClasses.length && !tmrwClasses.length) {
+        html = '<div class="list-state"><span>No upcoming classes today</span></div>';
+      } else {
+        if (todayClasses.length) {
+          html += `<div class="day-group">
+            <div class="day-divider">
+              <span class="day-divider-label">Today · ${fmtDateShort(today)}</span>
+              <span class="day-divider-line"></span>
+            </div>
+            <div class="rows-wrap">
+              ${todayClasses.map((c, i) => renderRow(c, i, now, false, firstLoad)).join('')}
+            </div>
+          </div>`;
+        }
+        if (tmrwClasses.length) {
+          html += `<div class="day-group">
+            <div class="day-divider">
+              <span class="day-divider-label">Tomorrow · ${fmtDateShort(tomorrow)}</span>
+              <span class="day-divider-line"></span>
+            </div>
+            <div class="rows-wrap">
+              ${tmrwClasses.map((c, i) => renderRow(c, i, now, true, firstLoad)).join('')}
+            </div>
+          </div>`;
+        }
       }
 
-      if (tmrwClasses.length) {
-        html += `<div class="day-divider" style="margin-top:6px">
-          <span class="day-divider-label">Tomorrow · ${fmtDateShort(tomorrow)}</span>
-          <span class="day-divider-line"></span>
-        </div>`;
-        html += tmrwClasses.map((c, i) => renderRow(c, i, now, true)).join('');
-      }
+      // Write into the hidden (inactive) panel, then crossfade
+      const inPanel  = activePanel === 'a' ? 'panel-b' : 'panel-a';
+      const outPanel = activePanel === 'a' ? 'panel-a' : 'panel-b';
 
-      list.innerHTML = html;
+      const inEl  = document.getElementById(inPanel);
+      const outEl = document.getElementById(outPanel);
+
+      inEl.innerHTML = html;
+
+      // Fade in new, fade out old
+      inEl.classList.remove('hidden');
+      outEl.classList.add('hidden');
+
+      activePanel = activePanel === 'a' ? 'b' : 'a';
+      firstLoad = false;
     }
 
-    function renderRow(c, i, now, isTomorrow) {
+    function renderRow(c, i, now, isTomorrow, animate) {
       const start = new Date(c.startDate);
       const end   = new Date(c.endDate);
       const isNow = !isTomorrow && now >= start && now < end;
@@ -470,7 +539,7 @@
       }
 
       return `
-        <div class="class-row ${rowClass}" style="animation-delay:${i * 0.04}s">
+        <div class="class-row ${rowClass}" style="${animate ? `animation-delay:${i * 0.04}s` : 'animation:none'}">
           <div>${timeCell}</div>
           <div class="class-info">
             <div class="class-name">${name}</div>
