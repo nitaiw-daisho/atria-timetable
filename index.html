@@ -50,7 +50,6 @@
       line-height: 1.8;
     }
     .sep { width: 48px; height: 1px; background: var(--gold); opacity: 0.5; }
-
     .spinner {
       width: 28px; height: 28px;
       border: 1px solid var(--border);
@@ -131,7 +130,7 @@
       font-weight: 400;
     }
 
-    /* Scrollable list area */
+    /* Scrollable list */
     #classes-list { flex: 1; overflow-y: auto; }
     #classes-list::-webkit-scrollbar { width: 2px; }
     #classes-list::-webkit-scrollbar-thumb { background: var(--gold-line); }
@@ -169,9 +168,13 @@
       padding: 18px 44px;
       border-bottom: 1px solid var(--border);
       position: relative;
-      animation: fadeUp 0.3s ease both;
+      animation: fadeUp 0.4s ease both;
     }
-    .class-row.now { background: var(--gold-dim); }
+
+    /* Active / in-progress */
+    .class-row.now {
+      background: var(--gold-dim);
+    }
     .class-row.now::before {
       content: '';
       position: absolute;
@@ -179,12 +182,21 @@
       width: 3px;
       background: var(--gold);
     }
-    .class-row.past { opacity: 0.25; }
-    .class-row.tomorrow { opacity: 0.65; }
+
+    /* Tomorrow rows — slightly muted */
+    .class-row.tomorrow { opacity: 0.6; }
 
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; max-height: 120px; }
+      to   { opacity: 0; max-height: 0; padding-top: 0; padding-bottom: 0; }
+    }
+    .class-row.removing {
+      animation: fadeOut 0.5s ease forwards;
+      overflow: hidden;
     }
 
     /* Time cell */
@@ -196,8 +208,30 @@
     }
     .time-end { font-size: 0.67rem; color: var(--text-dim); margin-top: 4px; }
 
-    /* Class info cell */
-    .class-info { padding-right: 10px; }
+    /* In-progress badge */
+    .now-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      font-size: 0.55rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(200,168,75,0.12);
+      border: 1px solid rgba(200,168,75,0.25);
+      border-radius: 2px;
+      padding: 2px 6px;
+    }
+    .now-badge-dot {
+      width: 4px; height: 4px;
+      background: var(--gold);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    /* Class info */
+    .class-info { padding-right: 10px; align-self: center; }
     .class-name {
       font-size: 0.95rem;
       font-weight: 400;
@@ -205,20 +239,20 @@
       line-height: 1.3;
     }
     .class-zone {
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       color: var(--text-dim);
-      margin-top: 4px;
-      letter-spacing: 0.05em;
+      margin-top: 5px;
     }
     .class-zone span {
       display: inline-block;
-      background: rgba(200,168,75,0.08);
-      border: 1px solid rgba(200,168,75,0.2);
+      background: rgba(200,168,75,0.07);
+      border: 1px solid rgba(200,168,75,0.18);
       border-radius: 2px;
-      padding: 1px 6px;
+      padding: 1px 7px;
+      letter-spacing: 0.04em;
     }
 
-    /* Instructor cell */
+    /* Instructor */
     .class-instructor {
       font-size: 0.78rem;
       color: var(--text-mid);
@@ -228,7 +262,7 @@
       font-weight: 300;
     }
 
-    /* Spots cell */
+    /* Spots */
     .class-spots { text-align: right; align-self: center; }
     .spots-num { font-size: 1.25rem; font-weight: 500; line-height: 1; }
     .spots-num.open { color: #7BBF90; }
@@ -242,6 +276,7 @@
       margin-top: 4px;
     }
 
+    /* No classes message */
     .list-state {
       display: flex;
       align-items: center;
@@ -318,7 +353,8 @@
 
   <script>
     const WORKER_URL   = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
-    const REFRESH_MINS = 5;
+    const REFRESH_MINS = 5;       // Full data refresh interval
+    const TICK_SECS    = 30;      // How often to re-evaluate class states locally
 
     const pad = n => String(n).padStart(2, '0');
     const bne = d =>
@@ -328,11 +364,9 @@
     const fmt = iso => new Date(iso).toLocaleTimeString('en-AU', {
       hour: '2-digit', minute: '2-digit', hour12: true
     });
-
     const fmtDate = d => d.toLocaleDateString('en-AU', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
-
     const fmtDateShort = d => d.toLocaleDateString('en-AU', {
       weekday: 'long', day: 'numeric', month: 'long'
     });
@@ -357,9 +391,11 @@
       document.getElementById('header-date').textContent    = fmtDate(new Date());
     }
 
+    // ── Cached class data ────────────────────────────────────────
+    let cachedClasses = [];
+
     async function loadClasses() {
       const now = new Date();
-
       const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
       const tmrwEnd    = new Date(now);
       tmrwEnd.setDate(tmrwEnd.getDate() + 1);
@@ -378,44 +414,56 @@
         }
 
         const data = await res.json();
-        const classes = (data.value || []).filter(c => c.classType);
+        cachedClasses = (data.value || []).filter(c => c.classType);
+        cachedClasses.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
-        renderClasses(classes, now);
+        renderClasses(now);
         document.getElementById('footer-time').textContent = `Updated ${fmt(now.toISOString())}`;
         showApp();
 
       } catch (e) {
         console.error('Load error:', e);
         if (document.getElementById('app').style.display === 'flex') {
-          document.getElementById('classes-list').innerHTML =
-            '<div class="list-state"><span>Unable to load — retrying shortly</span></div>';
+          // Don't wipe the screen on a refresh failure — just note it
+          document.getElementById('footer-time').textContent = `Update failed — retrying`;
         } else {
           showError(`Unable to load schedule: ${e.message}`);
         }
       }
     }
 
-    function renderClasses(classes, now) {
-      const list = document.getElementById('classes-list');
-
-      if (!classes.length) {
-        list.innerHTML = '<div class="list-state"><span>No classes scheduled</span></div>';
-        return;
+    // ── Local tick — re-renders state every 30s without a network call ──
+    function tick() {
+      if (cachedClasses.length && document.getElementById('app').style.display === 'flex') {
+        renderClasses(new Date());
+        // Update date header in case day rolled over
+        document.getElementById('header-date').textContent = fmtDate(new Date());
       }
+    }
 
-      classes.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-
-      const today    = new Date(now);
+    // ── Render ───────────────────────────────────────────────────
+    function renderClasses(now) {
+      const list    = document.getElementById('classes-list');
+      const today   = new Date(now);
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // Split into today and tomorrow
-      const todayClasses = classes.filter(c => isSameDay(new Date(c.startDate), today));
-      const tmrwClasses  = classes.filter(c => isSameDay(new Date(c.startDate), tomorrow));
+      // Filter: drop past classes (ended more than 0 mins ago)
+      const visible = cachedClasses.filter(c => new Date(c.endDate) > now);
+
+      const todayClasses = visible.filter(c => isSameDay(new Date(c.startDate), today));
+      const tmrwClasses  = visible.filter(c => isSameDay(new Date(c.startDate), tomorrow));
+
+      // Show tomorrow divider only when today has no remaining classes
+      const showTomorrow = tmrwClasses.length > 0;
+
+      if (!todayClasses.length && !tmrwClasses.length) {
+        list.innerHTML = '<div class="list-state"><span>No upcoming classes today</span></div>';
+        return;
+      }
 
       let html = '';
 
-      // Today section
       if (todayClasses.length) {
         html += `<div class="day-divider">
           <span class="day-divider-label">Today · ${fmtDateShort(today)}</span>
@@ -424,23 +472,21 @@
         html += todayClasses.map((c, i) => renderRow(c, i, now, false)).join('');
       }
 
-      // Tomorrow section — only shown if today has classes or it's end of day
-      if (tmrwClasses.length) {
-        html += `<div class="day-divider" style="margin-top:4px">
+      if (showTomorrow) {
+        html += `<div class="day-divider" style="margin-top: 6px">
           <span class="day-divider-label">Tomorrow · ${fmtDateShort(tomorrow)}</span>
           <span class="day-divider-line"></span>
         </div>`;
         html += tmrwClasses.map((c, i) => renderRow(c, i, now, true)).join('');
       }
 
-      list.innerHTML = html || '<div class="list-state"><span>No classes scheduled</span></div>';
+      list.innerHTML = html;
     }
 
     function renderRow(c, i, now, isTomorrow) {
-      const start  = new Date(c.startDate);
-      const end    = new Date(c.endDate);
-      const isNow  = !isTomorrow && now >= start && now <= end;
-      const isPast = !isTomorrow && now > end;
+      const start = new Date(c.startDate);
+      const end   = new Date(c.endDate);
+      const isNow = !isTomorrow && now >= start && now < end;
 
       const limit = c.attendeesLimit || 0;
       const taken = c.attendeesCount || 0;
@@ -452,18 +498,20 @@
         : '—';
 
       const name = c.classType?.name || 'Class';
-
-      // Zone / room name — from expanded ClubZone, fallback to clubZoneId
       const zone = c.clubZone?.name || c.clubZone?.shortName || null;
 
-      const rowClass = isNow ? 'now' : isPast ? 'past' : isTomorrow ? 'tomorrow' : '';
+      const rowClass = isNow ? 'now' : isTomorrow ? 'tomorrow' : '';
+
+      // For in-progress classes, show a "now" badge instead of end time
+      const timeCell = isNow
+        ? `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="now-badge"><span class="now-badge-dot"></span>In Progress</div>`
+        : `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="time-end">${fmt(c.endDate)}</div>`;
 
       return `
         <div class="class-row ${rowClass}" style="animation-delay:${i * 0.04}s">
-          <div>
-            <div class="time-start">${fmt(c.startDate)}</div>
-            <div class="time-end">${fmt(c.endDate)}</div>
-          </div>
+          <div>${timeCell}</div>
           <div class="class-info">
             <div class="class-name">${name}</div>
             ${zone ? `<div class="class-zone"><span>${zone}</span></div>` : ''}
@@ -479,8 +527,10 @@
         </div>`;
     }
 
+    // ── Boot ─────────────────────────────────────────────────────
     loadClasses();
     setInterval(loadClasses, REFRESH_MINS * 60 * 1000);
+    setInterval(tick, TICK_SECS * 1000);
   </script>
 
 </body>
