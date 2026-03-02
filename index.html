@@ -345,7 +345,7 @@
     </div>
 
     <div class="footer">
-      <div class="footer-left">Today's Schedule &nbsp;·&nbsp; 180–192 Ann Street, Brisbane</div>
+      <div class="footer-left" id="footer-label">Today's Schedule &nbsp;·&nbsp; 180–192 Ann Street, Brisbane</div>
       <div class="footer-right" id="footer-time"></div>
     </div>
   </div>
@@ -357,6 +357,19 @@
     const LOW_SPOTS_THRESHOLD = 3;
 
     const pad = n => String(n).padStart(2, '0');
+
+    // HTML-encode API-derived strings before injecting into innerHTML
+    const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+    const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESC[c]);
+
+    // Return a Date at midnight Brisbane time (UTC+10, no DST) for the given moment
+    function brisbaneMidnight(d) {
+      const p = new Intl.DateTimeFormat('en', {
+        timeZone: 'Australia/Brisbane',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }).formatToParts(d).reduce((acc, { type, value }) => ({ ...acc, [type]: value }), {});
+      return new Date(`${p.year}-${p.month}-${p.day}T00:00:00+10:00`);
+    }
 
     // Format a Date as a Brisbane-timezone ISO 8601 string for API queries
     function bne(d) {
@@ -397,7 +410,7 @@
 
     async function loadClasses() {
       const now = new Date();
-      const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+      const todayStart = brisbaneMidnight(now);
       // Fetch a full week ahead so we always have enough days to fill the screen
       const weekEnd = new Date(now);
       weekEnd.setDate(weekEnd.getDate() + 7);
@@ -456,9 +469,9 @@
     function groupByDay(classes) {
       const map = new Map();
       for (const c of classes) {
-        const d = new Date(c.startDate);
-        const key = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-        if (!map.has(key)) map.set(key, { date: new Date(d.setHours(0,0,0,0)), rows: [] });
+        const midnight = brisbaneMidnight(new Date(c.startDate));
+        const key = midnight.toISOString();
+        if (!map.has(key)) map.set(key, { date: midnight, rows: [] });
         map.get(key).rows.push(c);
       }
       return Array.from(map.values()).sort((a, b) => a.date - b.date);
@@ -482,14 +495,15 @@
       let usedH = 160 + 46 + 52; // chrome height
       let daysUsed = 0;
 
+      const today    = brisbaneMidnight(now);
+      const tomorrow = new Date(today.getTime() + 86400000);
+
       for (const day of days) {
         const dayH = DIVIDER_H + day.rows.length * ROW_H;
         // Always show at least 1 day; keep adding while there's space
         if (daysUsed > 0 && usedH + dayH > screenH) break;
 
         const labelDate = day.date;
-        const today     = new Date(now); today.setHours(0,0,0,0);
-        const tomorrow  = new Date(today); tomorrow.setDate(today.getDate() + 1);
 
         let label;
         if (labelDate.getTime() === today.getTime())         label = `Today · ${fmtDateShort(labelDate)}`;
@@ -510,6 +524,17 @@
 
         usedH += dayH;
         daysUsed++;
+      }
+
+      // Update footer label to reflect which days are actually shown
+      const footerLabel = document.getElementById('footer-label');
+      if (footerLabel) {
+        const firstIsToday = days[0].date.getTime() === today.getTime();
+        let title;
+        if      (daysUsed === 1 && firstIsToday)  title = "Today's Schedule";
+        else if (daysUsed >= 2 && firstIsToday)   title = 'Today & Tomorrow';
+        else                                       title = 'Upcoming Schedule';
+        footerLabel.innerHTML = `${title} &nbsp;·&nbsp; 180\u2013192 Ann Street, Brisbane`;
       }
 
       swapPanel(html);
@@ -536,11 +561,11 @@
       const taken = c.attendeesCount || 0;
       const left  = Math.max(0, limit - taken);
 
-      const instructor = c.instructor
+      const instructor = escapeHtml(c.instructor
         ? `${c.instructor.firstName} ${c.instructor.lastName}`.trim()
-        : '—';
+        : '—');
 
-      const name = c.classType?.name || 'Class';
+      const name = escapeHtml(c.classType?.name || 'Class');
       const zone = c.clubZone?.name || c.clubZone?.shortName || null;
       const rowClass = isNow ? 'now' : isFuture ? 'tomorrow' : '';
 
@@ -566,7 +591,7 @@
           <div>${timeCell}</div>
           <div class="class-info">
             <div class="class-name">${name}</div>
-            ${zone ? `<div class="class-zone"><span>${zone}</span></div>` : ''}
+            ${zone ? `<div class="class-zone"><span>${escapeHtml(zone)}</span></div>` : ''}
           </div>
           <div class="class-instructor">${instructor}</div>
           <div class="class-spots">${spotsHtml}</div>
