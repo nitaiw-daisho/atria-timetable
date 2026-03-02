@@ -4,18 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atria Wellness Club – Today's Classes</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --gold: #C9A84C;
-      --gold-light: #E2C97E;
-      --gold-dim: rgba(201,168,76,0.15);
-      --bg: #0A0A0A;
-      --bg2: #111111;
-      --bg3: #1A1A1A;
-      --text: #F0EDE6;
-      --text-dim: rgba(240,237,230,0.5);
-      --border: rgba(201,168,76,0.2);
+      --bg:        #0D0D0D;
+      --bg2:       #141414;
+      --bg3:       #1C1C1C;
+      --gold:      #C8A84B;
+      --gold-dim:  rgba(200,168,75,0.12);
+      --gold-line: rgba(200,168,75,0.35);
+      --text:      #F2EEE6;
+      --text-mid:  rgba(242,238,230,0.6);
+      --text-dim:  rgba(242,238,230,0.35);
+      --border:    rgba(242,238,230,0.08);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,49 +26,53 @@
       background: var(--bg);
       color: var(--text);
       font-family: 'Barlow', sans-serif;
+      font-weight: 300;
       overflow: hidden;
     }
 
-    /* ── SETUP SCREEN ── */
+    /* ─── SETUP ─── */
     #setup {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       height: 100vh;
-      gap: 20px;
-      padding: 40px;
-      background: var(--bg);
+      gap: 22px;
+      padding: 48px 40px;
     }
 
-    #setup h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2rem;
-      font-weight: 300;
-      color: var(--gold);
-      letter-spacing: 0.1em;
-      text-align: center;
+    #setup img.logo {
+      width: 160px;
+      margin-bottom: 8px;
+      filter: brightness(1.1);
+    }
+
+    .sep {
+      width: 48px; height: 1px;
+      background: var(--gold);
+      opacity: 0.6;
     }
 
     #setup p {
       color: var(--text-dim);
-      font-size: 0.85rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
       text-align: center;
-      max-width: 320px;
-      line-height: 1.6;
+      max-width: 300px;
+      line-height: 1.7;
     }
 
     .input-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
       width: 100%;
-      max-width: 360px;
+      max-width: 340px;
     }
 
     .input-group label {
-      font-size: 0.7rem;
-      letter-spacing: 0.12em;
+      font-size: 0.62rem;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--gold);
     }
@@ -78,41 +83,46 @@
       color: var(--text);
       padding: 12px 16px;
       font-family: 'Barlow', sans-serif;
-      font-size: 0.9rem;
-      border-radius: 2px;
+      font-size: 0.88rem;
+      font-weight: 300;
+      border-radius: 0;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.25s;
+      letter-spacing: 0.03em;
     }
 
-    .input-group input:focus { border-color: var(--gold); }
+    .input-group input:focus { border-color: rgba(200,168,75,0.5); }
 
     .btn {
-      background: var(--gold);
-      color: #0A0A0A;
-      border: none;
-      padding: 14px 40px;
+      background: transparent;
+      color: var(--gold);
+      border: 1px solid var(--gold-line);
+      padding: 13px 40px;
       font-family: 'Barlow', sans-serif;
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.15em;
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
       cursor: pointer;
-      border-radius: 2px;
-      transition: background 0.2s;
+      transition: background 0.25s, color 0.25s;
       width: 100%;
-      max-width: 360px;
+      max-width: 340px;
     }
 
-    .btn:hover { background: var(--gold-light); }
+    .btn:hover {
+      background: var(--gold);
+      color: var(--bg);
+    }
 
     #error-msg {
-      color: #E07070;
-      font-size: 0.8rem;
+      color: #C97070;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
       text-align: center;
       display: none;
     }
 
-    /* ── TIMETABLE SCREEN ── */
+    /* ─── APP ─── */
     #app {
       display: none;
       flex-direction: column;
@@ -120,138 +130,157 @@
       overflow: hidden;
     }
 
+    /* Header */
     .header {
-      padding: 28px 24px 20px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
+      padding: 32px 28px 24px;
       flex-shrink: 0;
+      position: relative;
     }
 
-    .header-top {
+    .header-logo {
+      width: 130px;
+      display: block;
+      margin-bottom: 18px;
+      filter: brightness(1.1);
+    }
+
+    .header-gold-line {
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold) 0%, transparent 70%);
+      margin-bottom: 14px;
+      opacity: 0.5;
+    }
+
+    .header-bottom {
       display: flex;
-      align-items: baseline;
       justify-content: space-between;
-      margin-bottom: 4px;
+      align-items: flex-end;
     }
 
-    .club-name {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem;
-      font-weight: 300;
-      letter-spacing: 0.08em;
-      color: var(--text);
+    .header-date {
+      font-size: 0.68rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-mid);
     }
 
-    .club-name span { color: var(--gold); }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.6rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
 
     .live-dot {
-      width: 7px; height: 7px;
+      width: 6px; height: 6px;
       background: var(--gold);
       border-radius: 50%;
-      display: inline-block;
-      margin-right: 6px;
-      animation: pulse 2s infinite;
+      animation: pulse 2.5s ease-in-out infinite;
     }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    .live-label {
-      font-size: 0.65rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-    }
-
-    .date-line {
-      font-size: 0.75rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-top: 2px;
-    }
-
-    .col-headers {
+    /* Column headers */
+    .col-heads {
       display: grid;
-      grid-template-columns: 70px 1fr 1fr 80px;
-      padding: 10px 24px;
+      grid-template-columns: 68px 1fr 90px 70px;
+      padding: 8px 28px 8px;
+      border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
       background: var(--bg2);
       flex-shrink: 0;
     }
 
-    .col-header {
-      font-size: 0.6rem;
-      letter-spacing: 0.14em;
+    .col-head {
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--gold);
+      font-weight: 400;
     }
 
+    /* Classes */
     #classes-list {
       flex: 1;
       overflow-y: auto;
-      padding: 8px 0;
     }
 
-    #classes-list::-webkit-scrollbar { width: 3px; }
+    #classes-list::-webkit-scrollbar { width: 2px; }
     #classes-list::-webkit-scrollbar-track { background: transparent; }
-    #classes-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    #classes-list::-webkit-scrollbar-thumb { background: var(--gold-line); }
 
     .class-row {
       display: grid;
-      grid-template-columns: 70px 1fr 1fr 80px;
-      padding: 14px 24px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-      animation: fadeIn 0.4s ease both;
+      grid-template-columns: 68px 1fr 90px 70px;
+      padding: 15px 28px;
+      border-bottom: 1px solid var(--border);
+      animation: fadeUp 0.35s ease both;
+      position: relative;
     }
 
-    .class-row.active {
+    .class-row.now {
       background: var(--gold-dim);
-      border-left: 2px solid var(--gold);
-      padding-left: 22px;
     }
 
-    .class-row.past { opacity: 0.35; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+    .class-row.now::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 2px;
+      background: var(--gold);
     }
 
-    .class-time {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--gold-light);
-      line-height: 1.3;
+    .class-row.past { opacity: 0.3; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
 
-    .class-time-end {
-      font-size: 0.65rem;
+    .time-start {
+      font-size: 0.9rem;
+      font-weight: 400;
+      color: var(--gold);
+      letter-spacing: 0.02em;
+      line-height: 1.2;
+    }
+
+    .time-end {
+      font-size: 0.62rem;
       color: var(--text-dim);
-      margin-top: 2px;
+      margin-top: 3px;
+      letter-spacing: 0.04em;
     }
 
     .class-name {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.05rem;
+      font-size: 1.1rem;
       font-weight: 400;
       color: var(--text);
       line-height: 1.2;
+      padding-right: 8px;
     }
 
     .class-zone {
-      font-size: 0.65rem;
+      font-size: 0.62rem;
       color: var(--text-dim);
-      margin-top: 3px;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.07em;
+      margin-top: 4px;
+      text-transform: uppercase;
     }
 
     .class-instructor {
-      font-size: 0.8rem;
-      color: var(--text-dim);
+      font-size: 0.75rem;
+      color: var(--text-mid);
       align-self: center;
+      padding-right: 8px;
+      line-height: 1.4;
     }
 
     .class-spots {
@@ -259,83 +288,83 @@
       align-self: center;
     }
 
-    .spots-num {
-      font-size: 1rem;
-      font-weight: 600;
+    .spots-count {
+      font-size: 1.1rem;
+      font-weight: 500;
       color: var(--text);
+      line-height: 1;
     }
 
-    .spots-num.low { color: #E07070; }
-    .spots-num.good { color: #70C090; }
+    .spots-count.full  { color: #C97070; }
+    .spots-count.low   { color: #C9A870; }
+    .spots-count.open  { color: #80B090; }
 
     .spots-label {
-      font-size: 0.6rem;
-      color: var(--text-dim);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .footer {
-      padding: 12px 24px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-      background: var(--bg);
-    }
-
-    .footer-text {
-      font-size: 0.65rem;
+      font-size: 0.56rem;
       color: var(--text-dim);
       letter-spacing: 0.1em;
       text-transform: uppercase;
+      margin-top: 3px;
     }
 
-    .refresh-time {
-      font-size: 0.65rem;
-      color: var(--text-dim);
-    }
-
+    /* State messages */
     .state-msg {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 200px;
-      gap: 12px;
+      gap: 14px;
+      height: 180px;
       color: var(--text-dim);
-      font-size: 0.85rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
     }
 
     .spinner {
-      width: 24px; height: 24px;
-      border: 2px solid var(--border);
+      width: 22px; height: 22px;
+      border: 1px solid var(--border);
       border-top-color: var(--gold);
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.9s linear infinite;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .gold-line {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-      margin: 0 24px;
-      opacity: 0.4;
+    /* Footer */
+    .footer {
+      padding: 11px 28px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .footer-left {
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .footer-right {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.06em;
     }
   </style>
 </head>
 <body>
 
-<!-- SETUP SCREEN -->
+<!-- SETUP -->
 <div id="setup">
-  <h1>ATRIA<br><span>Wellness Club</span></h1>
-  <p>Enter your Perfect Gym admin credentials to connect the live class timetable.</p>
+  <img class="logo" src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club" onerror="this.style.display='none'">
+  <div class="sep"></div>
+  <p>Enter your Perfect Gym credentials to connect the live class timetable display.</p>
 
   <div class="input-group">
     <label>Username / Email</label>
-    <input type="text" id="pg-user" placeholder="admin@atriawellness.com.au" autocomplete="off">
+    <input type="text" id="pg-user" placeholder="admin@atriawellnessclub.com.au" autocomplete="off" spellcheck="false">
   </div>
 
   <div class="input-group">
@@ -343,38 +372,38 @@
     <input type="password" id="pg-pass" placeholder="••••••••">
   </div>
 
-  <div id="error-msg"></div>
+  <div id="error-msg">Login failed — please check your credentials.</div>
 
-  <button class="btn" onclick="login()">Connect Timetable</button>
-  <p style="font-size:0.7rem; opacity:0.4;">Credentials stored in session only — not saved anywhere</p>
+  <button class="btn" onclick="login()">Connect</button>
+
+  <p style="font-size:0.62rem; opacity:0.3; letter-spacing:0.06em;">Credentials are session-only and not stored</p>
 </div>
 
-<!-- TIMETABLE SCREEN -->
+<!-- TIMETABLE -->
 <div id="app">
   <div class="header">
-    <div class="header-top">
-      <div class="club-name">ATRIA <span>Wellness Club</span></div>
-      <div class="live-label"><span class="live-dot"></span>Live</div>
+    <img class="header-logo" src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club" onerror="this.style.display='none'">
+    <div class="header-gold-line"></div>
+    <div class="header-bottom">
+      <div class="header-date" id="header-date"></div>
+      <div class="live-badge"><span class="live-dot"></span>Live</div>
     </div>
-    <div class="date-line" id="date-line"></div>
   </div>
 
-  <div class="col-headers">
-    <div class="col-header">Time</div>
-    <div class="col-header">Class</div>
-    <div class="col-header">Instructor</div>
-    <div class="col-header" style="text-align:right">Spots</div>
+  <div class="col-heads">
+    <div class="col-head">Time</div>
+    <div class="col-head">Class</div>
+    <div class="col-head">Instructor</div>
+    <div class="col-head" style="text-align:right">Spots</div>
   </div>
 
   <div id="classes-list">
     <div class="state-msg"><div class="spinner"></div><span>Loading classes...</span></div>
   </div>
 
-  <div class="gold-line"></div>
-
   <div class="footer">
-    <div class="footer-text">Today's Schedule</div>
-    <div class="refresh-time" id="refresh-time"></div>
+    <div class="footer-left">Today's Schedule · 180–192 Ann Street Brisbane</div>
+    <div class="footer-right" id="footer-updated"></div>
   </div>
 </div>
 
@@ -382,68 +411,67 @@
   const BASE = 'https://atriawellnessclub.perfectgym.com.au';
   let token = null;
 
-  function formatTime(iso) {
-    return new Date(iso).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: true });
-  }
+  const fmt = iso => new Date(iso).toLocaleTimeString('en-AU', {
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
 
-  function formatDate(d) {
-    return d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  }
+  const fmtDate = d => d.toLocaleDateString('en-AU', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  });
 
   async function login() {
-    const username = document.getElementById('pg-user').value.trim();
-    const password = document.getElementById('pg-pass').value;
-    const errEl = document.getElementById('error-msg');
-    errEl.style.display = 'none';
+    const user = document.getElementById('pg-user').value.trim();
+    const pass = document.getElementById('pg-pass').value;
+    const err  = document.getElementById('error-msg');
+    err.style.display = 'none';
 
-    if (!username || !password) {
-      errEl.textContent = 'Please enter your username and password.';
-      errEl.style.display = 'block';
+    if (!user || !pass) {
+      err.textContent = 'Please enter your username and password.';
+      err.style.display = 'block';
       return;
     }
 
     try {
-      const res = await fetch(`${BASE}/Api/Auth/Login`, {
+      const res  = await fetch(`${BASE}/Api/Auth/Login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login: username, password: password })
+        body: JSON.stringify({ login: user, password: pass })
       });
-
-      if (!res.ok) throw new Error('Login failed');
+      if (!res.ok) throw new Error();
       const data = await res.json();
       token = data.authToken || data.token || data.access_token;
-      if (!token) throw new Error('No token');
+      if (!token) throw new Error();
 
       document.getElementById('setup').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
-      document.getElementById('date-line').textContent = formatDate(new Date());
+      document.getElementById('app').style.display   = 'flex';
+      document.getElementById('header-date').textContent = fmtDate(new Date());
 
       await loadClasses();
-      setInterval(loadClasses, 5 * 60 * 1000); // refresh every 5 min
+      setInterval(loadClasses, 5 * 60 * 1000);
 
-    } catch (e) {
-      errEl.textContent = 'Login failed. Please check your credentials.';
-      errEl.style.display = 'block';
+    } catch {
+      err.textContent = 'Login failed — please check your credentials.';
+      err.style.display = 'block';
     }
   }
 
   async function loadClasses() {
-    const now = new Date();
+    const now   = new Date();
     const start = new Date(now); start.setHours(0,0,0,0);
-    const end = new Date(now); end.setHours(23,59,59,0);
+    const end   = new Date(now); end.setHours(23,59,59,0);
 
     try {
       const res = await fetch(
         `${BASE}/Api/Classes/Classes?clubId=1&startDate=${start.toISOString().slice(0,19)}&endDate=${end.toISOString().slice(0,19)}`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!res.ok) throw new Error();
       const data = await res.json();
       renderClasses(data.elements || data || [], now);
-      document.getElementById('refresh-time').textContent = `Updated ${formatTime(now.toISOString())}`;
+      document.getElementById('footer-updated').textContent = `Updated ${fmt(now.toISOString())}`;
     } catch {
       document.getElementById('classes-list').innerHTML =
-        '<div class="state-msg"><span>Unable to load classes. Will retry shortly.</span></div>';
+        '<div class="state-msg"><span>Unable to load — will retry shortly.</span></div>';
     }
   }
 
@@ -457,42 +485,42 @@
     classes.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
     list.innerHTML = classes.map((c, i) => {
-      const start = new Date(c.startDate);
-      const end = new Date(c.endDate);
-      const isActive = now >= start && now <= end;
-      const isPast = now > end;
-      const spotsLeft = (c.attendeesLimit || 0) - (c.attendeesCount || 0);
-      const spotsClass = spotsLeft <= 3 ? 'low' : spotsLeft <= 8 ? '' : 'good';
+      const s      = new Date(c.startDate);
+      const e      = new Date(c.endDate);
+      const isNow  = now >= s && now <= e;
+      const isPast = now > e;
+      const limit  = c.attendeesLimit || 0;
+      const count  = c.attendeesCount || 0;
+      const left   = Math.max(0, limit - count);
+      const spotsClass = limit === 0 ? '' : left === 0 ? 'full' : left <= 3 ? 'low' : 'open';
       const instructor = c.instructor
         ? (c.instructor.displayName || `${c.instructor.firstName} ${c.instructor.lastName}`)
         : '—';
-      const className = c.classType ? c.classType.name : (c.name || 'Class');
+      const name = c.classType?.name || c.name || 'Class';
       const zone = c.clubZone || '';
 
       return `
-        <div class="class-row ${isActive ? 'active' : isPast ? 'past' : ''}" style="animation-delay:${i * 0.04}s">
+        <div class="class-row ${isNow ? 'now' : isPast ? 'past' : ''}" style="animation-delay:${i*0.03}s">
           <div>
-            <div class="class-time">${formatTime(c.startDate)}</div>
-            <div class="class-time-end">${formatTime(c.endDate)}</div>
+            <div class="time-start">${fmt(c.startDate)}</div>
+            <div class="time-end">${fmt(c.endDate)}</div>
           </div>
           <div>
-            <div class="class-name">${className}</div>
+            <div class="class-name">${name}</div>
             ${zone ? `<div class="class-zone">${zone}</div>` : ''}
           </div>
           <div class="class-instructor">${instructor}</div>
           <div class="class-spots">
-            ${c.attendeesLimit
-              ? `<div class="spots-num ${spotsClass}">${Math.max(0, spotsLeft)}</div><div class="spots-label">spots</div>`
-              : '<div class="spots-label" style="padding-top:4px">Open</div>'
+            ${limit
+              ? `<div class="spots-count ${spotsClass}">${left}</div><div class="spots-label">spots</div>`
+              : `<div class="spots-label" style="margin-top:6px">Open</div>`
             }
           </div>
         </div>`;
     }).join('');
   }
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter') login();
-  });
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
 </script>
 </body>
 </html>
