@@ -8,6 +8,7 @@
     :root {
       --bg:        #0D0D0D;
       --bg2:       #141414;
+      --bg3:       #111111;
       --gold:      #C8A84B;
       --gold-dim:  rgba(200,168,75,0.12);
       --gold-line: rgba(200,168,75,0.35);
@@ -29,7 +30,7 @@
       overflow: hidden;
     }
 
-    /* ── Screens ── */
+    /* ── Utility screens ── */
     .screen {
       display: flex;
       flex-direction: column;
@@ -40,9 +41,7 @@
       padding: 60px;
       text-align: center;
     }
-
     .screen img { width: 200px; filter: brightness(1.1); }
-
     .screen p {
       font-size: 0.85rem;
       letter-spacing: 0.1em;
@@ -50,7 +49,6 @@
       max-width: 320px;
       line-height: 1.8;
     }
-
     .sep { width: 48px; height: 1px; background: var(--gold); opacity: 0.5; }
 
     .spinner {
@@ -60,7 +58,6 @@
       border-radius: 50%;
       animation: spin 0.9s linear infinite;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ── Main app ── */
@@ -72,38 +69,30 @@
     }
 
     /* Header */
-    .header {
-      padding: 40px 44px 28px;
-      flex-shrink: 0;
-    }
-
+    .header { padding: 40px 44px 26px; flex-shrink: 0; }
     .header img {
       width: 180px;
       display: block;
       margin-bottom: 22px;
       filter: brightness(1.1);
     }
-
     .header-rule {
       height: 1px;
       background: linear-gradient(90deg, var(--gold) 0%, transparent 60%);
       opacity: 0.45;
       margin-bottom: 16px;
     }
-
     .header-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-
     .header-date {
       font-size: 0.75rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       color: var(--text-mid);
     }
-
     .live {
       display: flex;
       align-items: center;
@@ -113,14 +102,12 @@
       text-transform: uppercase;
       color: var(--text-dim);
     }
-
     .live-dot {
       width: 7px; height: 7px;
       background: var(--gold);
       border-radius: 50%;
       animation: pulse 2.5s ease-in-out infinite;
     }
-
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50%       { opacity: 0.3; }
@@ -129,37 +116,61 @@
     /* Column headers */
     .col-heads {
       display: grid;
-      grid-template-columns: 90px 1fr 130px 80px;
-      padding: 12px 44px;
+      grid-template-columns: 88px 1fr 110px 72px;
+      padding: 11px 44px;
       background: var(--bg2);
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
-
     .col-head {
-      font-size: 0.6rem;
+      font-size: 0.58rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--gold);
       font-weight: 400;
     }
 
-    /* Class rows */
+    /* Scrollable list area */
     #classes-list { flex: 1; overflow-y: auto; }
-
     #classes-list::-webkit-scrollbar { width: 2px; }
     #classes-list::-webkit-scrollbar-thumb { background: var(--gold-line); }
 
+    /* Day divider */
+    .day-divider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 44px 10px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .day-divider-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 400;
+      white-space: nowrap;
+    }
+    .day-divider-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Class rows */
     .class-row {
       display: grid;
-      grid-template-columns: 90px 1fr 130px 80px;
-      padding: 20px 44px;
+      grid-template-columns: 88px 1fr 110px 72px;
+      padding: 18px 44px;
       border-bottom: 1px solid var(--border);
       position: relative;
       animation: fadeUp 0.3s ease both;
     }
-
     .class-row.now { background: var(--gold-dim); }
     .class-row.now::before {
       content: '';
@@ -168,38 +179,48 @@
       width: 3px;
       background: var(--gold);
     }
-
     .class-row.past { opacity: 0.25; }
+    .class-row.tomorrow { opacity: 0.65; }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* Time cell */
     .time-start {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 400;
       color: var(--gold);
       line-height: 1.2;
     }
+    .time-end { font-size: 0.67rem; color: var(--text-dim); margin-top: 4px; }
 
-    .time-end {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      margin-top: 4px;
-    }
-
+    /* Class info cell */
+    .class-info { padding-right: 10px; }
     .class-name {
-      font-size: 1rem;
+      font-size: 0.95rem;
       font-weight: 400;
       color: var(--text);
       line-height: 1.3;
-      padding-right: 12px;
-      align-self: center;
+    }
+    .class-zone {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+    }
+    .class-zone span {
+      display: inline-block;
+      background: rgba(200,168,75,0.08);
+      border: 1px solid rgba(200,168,75,0.2);
+      border-radius: 2px;
+      padding: 1px 6px;
     }
 
+    /* Instructor cell */
     .class-instructor {
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       color: var(--text-mid);
       align-self: center;
       padding-right: 8px;
@@ -207,15 +228,14 @@
       font-weight: 300;
     }
 
+    /* Spots cell */
     .class-spots { text-align: right; align-self: center; }
-
-    .spots-num { font-size: 1.3rem; font-weight: 500; line-height: 1; }
+    .spots-num { font-size: 1.25rem; font-weight: 500; line-height: 1; }
     .spots-num.open { color: #7BBF90; }
     .spots-num.low  { color: #C9A870; }
     .spots-num.full { color: #C97070; }
-
     .spots-lbl {
-      font-size: 0.55rem;
+      font-size: 0.52rem;
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 0.12em;
@@ -236,26 +256,20 @@
 
     /* Footer */
     .footer {
-      padding: 16px 44px;
+      padding: 14px 44px;
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-shrink: 0;
     }
-
     .footer-left {
-      font-size: 0.62rem;
+      font-size: 0.6rem;
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--text-dim);
     }
-
-    .footer-right {
-      font-size: 0.62rem;
-      color: var(--text-dim);
-      letter-spacing: 0.06em;
-    }
+    .footer-right { font-size: 0.6rem; color: var(--text-dim); letter-spacing: 0.06em; }
   </style>
 </head>
 <body>
@@ -306,6 +320,11 @@
     const WORKER_URL   = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
     const REFRESH_MINS = 5;
 
+    const pad = n => String(n).padStart(2, '0');
+    const bne = d =>
+      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` +
+      `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+10:00`;
+
     const fmt = iso => new Date(iso).toLocaleTimeString('en-AU', {
       hour: '2-digit', minute: '2-digit', hour12: true
     });
@@ -313,6 +332,16 @@
     const fmtDate = d => d.toLocaleDateString('en-AU', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
+
+    const fmtDateShort = d => d.toLocaleDateString('en-AU', {
+      weekday: 'long', day: 'numeric', month: 'long'
+    });
+
+    function isSameDay(a, b) {
+      return a.getFullYear() === b.getFullYear() &&
+             a.getMonth()    === b.getMonth()    &&
+             a.getDate()     === b.getDate();
+    }
 
     function showError(msg) {
       document.getElementById('loading').style.display      = 'none';
@@ -330,17 +359,15 @@
 
     async function loadClasses() {
       const now = new Date();
-      const pad = n => String(n).padStart(2, '0');
-      const bne = d =>
-        `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` +
-        `T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}+10:00`;
 
-      const start = new Date(now); start.setHours(0, 0, 0, 0);
-      const end   = new Date(now); end.setHours(23, 59, 59, 0);
+      const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+      const tmrwEnd    = new Date(now);
+      tmrwEnd.setDate(tmrwEnd.getDate() + 1);
+      tmrwEnd.setHours(23, 59, 59, 0);
 
       const params = new URLSearchParams({
-        startDate: bne(start),
-        endDate:   bne(end),
+        startDate: bne(todayStart),
+        endDate:   bne(tmrwEnd),
       });
 
       try {
@@ -351,10 +378,6 @@
         }
 
         const data = await res.json();
-
-        // Show ALL classes — no isDeleted filtering
-        // The isDeleted flag on class instances appears to be a PG draft flag,
-        // not a cancellation. Only skip if classType is missing entirely.
         const classes = (data.value || []).filter(c => c.classType);
 
         renderClasses(classes, now);
@@ -376,47 +399,84 @@
       const list = document.getElementById('classes-list');
 
       if (!classes.length) {
-        list.innerHTML = '<div class="list-state"><span>No classes scheduled for today</span></div>';
+        list.innerHTML = '<div class="list-state"><span>No classes scheduled</span></div>';
         return;
       }
 
       classes.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
-      list.innerHTML = classes.map((c, i) => {
-        const start  = new Date(c.startDate);
-        const end    = new Date(c.endDate);
-        const isNow  = now >= start && now <= end;
-        const isPast = now > end;
+      const today    = new Date(now);
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const limit = c.attendeesLimit || 0;
-        const taken = c.attendeesCount || 0;
-        const left  = Math.max(0, limit - taken);
-        const spotsClass = limit === 0 ? '' : left === 0 ? 'full' : left <= 3 ? 'low' : 'open';
+      // Split into today and tomorrow
+      const todayClasses = classes.filter(c => isSameDay(new Date(c.startDate), today));
+      const tmrwClasses  = classes.filter(c => isSameDay(new Date(c.startDate), tomorrow));
 
-        const instructor = c.instructor
-          ? `${c.instructor.firstName} ${c.instructor.lastName}`.trim()
-          : '—';
+      let html = '';
 
-        const name = c.classType?.name || 'Class';
+      // Today section
+      if (todayClasses.length) {
+        html += `<div class="day-divider">
+          <span class="day-divider-label">Today · ${fmtDateShort(today)}</span>
+          <span class="day-divider-line"></span>
+        </div>`;
+        html += todayClasses.map((c, i) => renderRow(c, i, now, false)).join('');
+      }
 
-        return `
-          <div class="class-row ${isNow ? 'now' : isPast ? 'past' : ''}"
-               style="animation-delay:${i * 0.04}s">
-            <div>
-              <div class="time-start">${fmt(c.startDate)}</div>
-              <div class="time-end">${fmt(c.endDate)}</div>
-            </div>
+      // Tomorrow section — only shown if today has classes or it's end of day
+      if (tmrwClasses.length) {
+        html += `<div class="day-divider" style="margin-top:4px">
+          <span class="day-divider-label">Tomorrow · ${fmtDateShort(tomorrow)}</span>
+          <span class="day-divider-line"></span>
+        </div>`;
+        html += tmrwClasses.map((c, i) => renderRow(c, i, now, true)).join('');
+      }
+
+      list.innerHTML = html || '<div class="list-state"><span>No classes scheduled</span></div>';
+    }
+
+    function renderRow(c, i, now, isTomorrow) {
+      const start  = new Date(c.startDate);
+      const end    = new Date(c.endDate);
+      const isNow  = !isTomorrow && now >= start && now <= end;
+      const isPast = !isTomorrow && now > end;
+
+      const limit = c.attendeesLimit || 0;
+      const taken = c.attendeesCount || 0;
+      const left  = Math.max(0, limit - taken);
+      const spotsClass = limit === 0 ? '' : left === 0 ? 'full' : left <= 3 ? 'low' : 'open';
+
+      const instructor = c.instructor
+        ? `${c.instructor.firstName} ${c.instructor.lastName}`.trim()
+        : '—';
+
+      const name = c.classType?.name || 'Class';
+
+      // Zone / room name — from expanded ClubZone, fallback to clubZoneId
+      const zone = c.clubZone?.name || c.clubZone?.shortName || null;
+
+      const rowClass = isNow ? 'now' : isPast ? 'past' : isTomorrow ? 'tomorrow' : '';
+
+      return `
+        <div class="class-row ${rowClass}" style="animation-delay:${i * 0.04}s">
+          <div>
+            <div class="time-start">${fmt(c.startDate)}</div>
+            <div class="time-end">${fmt(c.endDate)}</div>
+          </div>
+          <div class="class-info">
             <div class="class-name">${name}</div>
-            <div class="class-instructor">${instructor}</div>
-            <div class="class-spots">
-              ${limit
-                ? `<div class="spots-num ${spotsClass}">${left}</div>
-                   <div class="spots-lbl">spots</div>`
-                : `<div class="spots-lbl" style="margin-top:8px">Open</div>`
-              }
-            </div>
-          </div>`;
-      }).join('');
+            ${zone ? `<div class="class-zone"><span>${zone}</span></div>` : ''}
+          </div>
+          <div class="class-instructor">${instructor}</div>
+          <div class="class-spots">
+            ${limit
+              ? `<div class="spots-num ${spotsClass}">${left}</div>
+                 <div class="spots-lbl">spots</div>`
+              : `<div class="spots-lbl" style="margin-top:8px">Open</div>`
+            }
+          </div>
+        </div>`;
     }
 
     loadClasses();
