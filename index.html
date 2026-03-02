@@ -360,6 +360,7 @@
 
   <script>
     const WORKER_URL          = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
+    const CACHE_KEY           = 'atria-classes-cache';
     const REFRESH_MINS        = 5;
     const TICK_SECS           = 30;
     const LOW_SPOTS_THRESHOLD = 3;
@@ -450,6 +451,7 @@
           c.classType.isDeleted === false
         );
         cachedClasses.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(cachedClasses)); } catch (_) {}
 
         renderClasses(now);
         document.getElementById('footer-time').textContent = `Updated ${fmt(now.toISOString())}`;
@@ -612,6 +614,16 @@
           <div class="class-spots">${spotsHtml}</div>
         </div>`;
     }
+
+    // Show cached data immediately if available (eliminates loading spinner on reload)
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        cachedClasses = JSON.parse(raw);
+        renderClasses(new Date());
+        showApp();
+      }
+    } catch (_) {}
 
     loadClasses();
     setInterval(loadClasses, REFRESH_MINS * 60 * 1000);
