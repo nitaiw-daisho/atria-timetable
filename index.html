@@ -700,8 +700,8 @@
 
       for (const day of days) {
         const dayH = DIVIDER_H + day.rows.length * ROW_H;
-        // Always show at least 1 day; keep adding while there's space
-        if (daysUsed > 0 && usedH + dayH > screenH) break;
+        // Always show today + tomorrow; only apply height cap for 3rd day onwards
+        if (daysUsed >= 2 && usedH + dayH > screenH) break;
 
         const labelDate = day.date;
 
