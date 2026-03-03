@@ -22,8 +22,6 @@
       --col-time:      130px;
       --col-instr:     140px;
       --col-spots:     110px;
-      --hdr-col-time:  105px;
-      --hdr-col-spots:  82px;
       --badge-mt:       10px;
     }
 
@@ -132,7 +130,8 @@
     /* Column headers */
     .col-heads {
       display: grid;
-      grid-template-columns: var(--hdr-col-time) 1fr var(--col-instr) var(--hdr-col-spots);
+      grid-template-columns: var(--col-time) 1fr var(--col-instr) var(--col-spots);
+      column-gap: var(--col-gap);
       padding: 16px var(--side-pad);
       background: var(--bg2);
       border-top: 1px solid var(--border);
@@ -325,22 +324,7 @@
     }
 
     /* Class info */
-    .class-info { display: flex; align-items: center; gap: 10px; padding-right: 12px; }
-    .class-icon {
-      width: 32px; height: 32px;
-      border-radius: 4px;
-      object-fit: cover;
-      flex-shrink: 0;
-      opacity: 0.85;
-    }
-    .class-letter-icon {
-      width: 32px; height: 32px;
-      border-radius: 6px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; font-weight: 600;
-      color: rgba(255,255,255,0.9);
-      flex-shrink: 0;
-    }
+    .class-info { display: flex; align-items: flex-start; padding-right: 12px; }
     .class-name {
       font-size: 1.4rem;
       font-weight: 400;
@@ -483,8 +467,6 @@
         --col-time:      110px;
         --col-instr:     120px;
         --col-spots:      95px;
-        --hdr-col-time:   90px;
-        --hdr-col-spots:  70px;
         --badge-mt:        8px;
       }
     }
@@ -497,8 +479,6 @@
         --col-time:      150px;
         --col-instr:     180px;
         --col-spots:     130px;
-        --hdr-col-time:  120px;
-        --hdr-col-spots: 100px;
         --badge-mt:       12px;
       }
     }
@@ -939,14 +919,6 @@
       const classMeta = CLASS_MASTER[c.classType?.name || ''];
       const category  = classMeta?.category || null;
       const categoryColor = category ? (CATEGORY_COLORS[category] || '#6E6E7E') : null;
-      const rawIcon  = c.classType?.iconUrl || c.classType?.photoUrl || null;
-      const iconUrl  = rawIcon && /^https?:\/\//.test(rawIcon) ? escapeHtml(rawIcon) : null;
-      const letter   = (c.classType?.name || '?')[0].toUpperCase();
-      const letterBg = classColor(c.classType?.name || '');
-      const iconHtml = iconUrl
-        ? `<img class="class-icon" src="${iconUrl}" alt="" onerror="this.style.display='none'">`
-        : `<div class="class-letter-icon" style="background:${letterBg}">${escapeHtml(letter)}</div>`;
-
       const rowClass = isNow          ? 'now'
                      : isStartingSoon ? 'starting-soon'
                      : isFuture       ? 'tomorrow'
@@ -1003,7 +975,6 @@
         <div class="class-row ${rowClass}" style="${animate ? `animation-delay:${i * 0.04}s` : 'animation:none'}">
           <div class="class-time">${timeCell}</div>
           <div class="class-info">
-            ${iconHtml}
             <div>
               <div class="class-name">${name}</div>
               ${(category || zone) ? `<div class="class-meta">
