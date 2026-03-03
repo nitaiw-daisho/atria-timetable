@@ -559,8 +559,90 @@
     // HTML-encode API-derived strings before injecting into innerHTML
     const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
     const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESC[c]);
+    // Master categorisation table — maps every known class name to its metadata.
+    // Used to drive category-based icon colours.
+    const CLASS_MASTER = {
+      'A+ Activation':            { category: 'Event',      classType: 'Free Wellness' },
+      'Preventative Health Talk': { category: 'Event',      classType: 'Free Wellness' },
+      'Sound Healing (Rooftop)':  { category: 'Yoga',       classType: 'Free Wellness' },
+      'Athletic Reformer':        { category: 'Reformer',   classType: 'Paid' },
+      'ATRIA Club Tour':          { category: 'Event',      classType: 'Free' },
+      'Barre (no heat)':          { category: 'Barre',      classType: 'Paid' },
+      'HB Lunch':                 { category: 'Pilates',    classType: 'Paid' },
+      'HBB Lunch':                { category: 'Barre',      classType: 'Paid' },
+      'Hot Barre Bell':           { category: 'Barre',      classType: 'Paid' },
+      'Hot Power Yoga':           { category: 'Yoga',       classType: 'Paid' },
+      'Hot Yoga Flow':            { category: 'Yoga',       classType: 'Paid' },
+      'HotBells (warm)':          { category: 'Functional', classType: 'Paid' },
+      'HP (Hot Pilates)':         { category: 'Pilates',    classType: 'Paid' },
+      'HP Lunch':                 { category: 'Pilates',    classType: 'Paid' },
+      'IGNITE':                   { category: 'Pilates',    classType: 'Paid' },
+      'IGNITE Lunch':             { category: 'Pilates',    classType: 'Paid' },
+      'Instructor Training':      { category: 'Event',      classType: 'Event' },
+      'Jumpboard Reformer':       { category: 'Reformer',   classType: 'Paid' },
+      'Latin Pulse':              { category: 'Functional', classType: 'Paid' },
+      'Lift HIIT':                { category: 'Functional', classType: 'Paid' },
+      'Lift Strong':              { category: 'Functional', classType: 'Paid' },
+      'Lift Sweat':               { category: 'Functional', classType: 'Paid' },
+      'Mat Pilates (no heat)':    { category: 'Pilates',    classType: 'Paid' },
+      'MELT (Free)':              { category: 'Stretch',    classType: 'Free Wellness' },
+      'Melt (warm)':              { category: 'Stretch',    classType: 'Paid' },
+      'Mez IGNITE':               { category: 'Pilates',    classType: 'Paid' },
+      'Mez Matwork Pilates':      { category: 'Pilates',    classType: 'Paid' },
+      'Mez Melt':                 { category: 'Stretch',    classType: 'Paid' },
+      'Mez Yoga':                 { category: 'Yoga',       classType: 'Paid' },
+      'New Moon Yoga':            { category: 'Yoga',       classType: 'Paid' },
+      'NO CLASSES TODAY':         { category: 'Event',      classType: 'Event' },
+      'Pilates (Free)':           { category: 'Pilates',    classType: 'Free Wellness' },
+      'Power Yoga (no heat)':     { category: 'Yoga',       classType: 'Paid' },
+      'Reformer':                 { category: 'Reformer',   classType: 'Paid' },
+      'Rooftop Mat':              { category: 'Pilates',    classType: 'Paid' },
+      'Rooftop Melt':             { category: 'Stretch',    classType: 'Paid' },
+      'Rooftop Yoga':             { category: 'Yoga',       classType: 'Paid' },
+      'RT Latin Pulse':           { category: 'Functional', classType: 'Paid' },
+      'RT Mat Pilates':           { category: 'Pilates',    classType: 'Paid' },
+      'RT Melt':                  { category: 'Stretch',    classType: 'Paid' },
+      'RT Pilates Sculpt':        { category: 'Pilates',    classType: 'Paid' },
+      'RT Power Yoga':            { category: 'Yoga',       classType: 'Paid' },
+      'RT Strike Club':           { category: 'Boxing',     classType: 'Paid' },
+      'Sound Healing':            { category: 'Yoga',       classType: 'Paid' },
+      'Stretch (Free)':           { category: 'Stretch',    classType: 'Free Wellness' },
+      'Strike Club':              { category: 'Boxing',     classType: 'Paid' },
+      'THRIVE Main Studio':       { category: 'Pilates',    classType: 'Private' },
+      'THRIVE Reformer':          { category: 'Reformer',   classType: 'Private' },
+      'THRIVE Strike Club':       { category: 'Boxing',     classType: 'Private' },
+      'Yin Yoga':                 { category: 'Yoga',       classType: 'Paid' },
+      'Yoga (Free)':              { category: 'Yoga',       classType: 'Free Wellness' },
+      'Yoga Flow (no heat)':      { category: 'Yoga',       classType: 'Paid' },
+      'Yoga Lunch':               { category: 'Yoga',       classType: 'Paid' },
+    };
+
+    // Colour per primary category
+    const CATEGORY_COLORS = {
+      'Pilates':    '#5B7FA6',  // Blue
+      'Reformer':   '#3D8B89',  // Teal
+      'Yoga':       '#7B5BA6',  // Purple
+      'Barre':      '#A65B7F',  // Pink
+      'Functional': '#C47840',  // Orange
+      'Boxing':     '#A65B5B',  // Red
+      'Stretch':    '#5BA688',  // Green
+      'Event':      '#6E6E7E',  // Grey
+    };
+
+    // Class-type colours override the category colour
+    const CLASS_TYPE_COLORS = {
+      'Free Wellness': '#A69B5B',  // Warm gold — distinguishes complimentary classes
+      'Private':       '#4A4A5A',  // Dark grey — private/THRIVE bookings
+    };
+
     const CLASS_PALETTE = ['#5B7FA6','#A6875B','#5BA688','#A65B7F','#7B5BA6','#7BA65B'];
     const classColor = name => {
+      const meta = CLASS_MASTER[name];
+      if (meta) {
+        if (CLASS_TYPE_COLORS[meta.classType]) return CLASS_TYPE_COLORS[meta.classType];
+        if (CATEGORY_COLORS[meta.category])    return CATEGORY_COLORS[meta.category];
+      }
+      // Fallback: hash-based colour for any unrecognised class name
       let h = 0;
       for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFF;
       return CLASS_PALETTE[h % CLASS_PALETTE.length];
