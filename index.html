@@ -453,9 +453,43 @@
         --badge-mt:       12px;
       }
     }
+
+    /* ── Mobile / small tablet — hide the timetable, show a redirect notice ── */
+    @media (max-width: 899px) {
+      #loading, #error-screen, #app { display: none !important; }
+      #mobile-screen { display: flex !important; }
+    }
+    @media (min-width: 900px) {
+      #mobile-screen { display: none !important; }
+    }
+    #mobile-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 28px;
+      padding: 48px 32px;
+      text-align: center;
+    }
+    #mobile-screen img { width: 180px; filter: brightness(1.1); }
+    #mobile-screen .sep { width: 40px; height: 1px; background: var(--gold); opacity: 0.5; }
+    #mobile-screen p {
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      max-width: 300px;
+      line-height: 1.9;
+    }
   </style>
 </head>
 <body>
+
+  <div id="mobile-screen">
+    <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
+    <div class="sep"></div>
+    <p>This display is designed for a 1080p screen.<br>Please view on the club's timetable display.</p>
+  </div>
 
   <div id="loading" class="screen">
     <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
