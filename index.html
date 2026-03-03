@@ -296,6 +296,14 @@
       flex-shrink: 0;
       opacity: 0.85;
     }
+    .class-letter-icon {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 600;
+      color: rgba(255,255,255,0.9);
+      flex-shrink: 0;
+    }
     .class-name {
       font-size: 1.4rem;
       font-weight: 400;
@@ -457,6 +465,12 @@
     // HTML-encode API-derived strings before injecting into innerHTML
     const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
     const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESC[c]);
+    const CLASS_PALETTE = ['#5B7FA6','#A6875B','#5BA688','#A65B7F','#7B5BA6','#7BA65B'];
+    const classColor = name => {
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFF;
+      return CLASS_PALETTE[h % CLASS_PALETTE.length];
+    };
 
     // Return a Date at midnight Brisbane time (UTC+10, no DST) for the given moment
     function brisbaneMidnight(d) {
@@ -677,8 +691,13 @@
 
       const name = escapeHtml(c.classType?.name || 'Class');
       const zone = c.clubZone?.name || c.clubZone?.shortName || null;
-      const rawIcon = c.classType?.iconUrl || c.classType?.photoUrl || null;
-      const iconUrl = rawIcon && /^https?:\/\//.test(rawIcon) ? escapeHtml(rawIcon) : null;
+      const rawIcon  = c.classType?.iconUrl || c.classType?.photoUrl || null;
+      const iconUrl  = rawIcon && /^https?:\/\//.test(rawIcon) ? escapeHtml(rawIcon) : null;
+      const letter   = (c.classType?.name || '?')[0].toUpperCase();
+      const letterBg = classColor(c.classType?.name || '');
+      const iconHtml = iconUrl
+        ? `<img class="class-icon" src="${iconUrl}" alt="" onerror="this.style.display='none'">`
+        : `<div class="class-letter-icon" style="background:${letterBg}">${escapeHtml(letter)}</div>`;
 
       const rowClass = isNow          ? 'now'
                      : isStartingSoon ? 'starting-soon'
@@ -725,7 +744,7 @@
         <div class="class-row ${rowClass}" style="${animate ? `animation-delay:${i * 0.04}s` : 'animation:none'}">
           <div>${timeCell}</div>
           <div class="class-info">
-            ${iconUrl ? `<img class="class-icon" src="${iconUrl}" alt="" onerror="this.style.display='none'">` : ''}
+            ${iconHtml}
             <div>
               <div class="class-name">${name}</div>
               ${zone ? `<div class="class-zone"><span>${escapeHtml(zone)}</span></div>` : ''}
