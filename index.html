@@ -17,6 +17,13 @@
       --text-dim:  rgba(242,238,230,0.35);
       --border:    rgba(242,238,230,0.08);
       --font: 'Century Gothic', 'Trebuchet MS', 'Gill Sans', sans-serif;
+      --side-pad:      48px;
+      --col-time:      130px;
+      --col-instr:     140px;
+      --col-spots:     110px;
+      --hdr-col-time:  105px;
+      --hdr-col-spots:  82px;
+      --badge-mt:       10px;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -67,7 +74,7 @@
     }
 
     /* Header */
-    .header { padding: 36px 48px 24px; flex-shrink: 0; }
+    .header { padding: 36px var(--side-pad) 24px; flex-shrink: 0; }
     .header img {
       width: 200px;
       display: block;
@@ -110,8 +117,8 @@
     /* Column headers */
     .col-heads {
       display: grid;
-      grid-template-columns: 105px 1fr 140px 82px;
-      padding: 16px 48px;
+      grid-template-columns: var(--hdr-col-time) 1fr var(--col-instr) var(--hdr-col-spots);
+      padding: 16px var(--side-pad);
       background: var(--bg2);
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
@@ -164,9 +171,9 @@
     /* Class row — stretches to fill available height */
     .class-row {
       display: grid;
-      grid-template-columns: 130px 1fr 140px 110px;
+      grid-template-columns: var(--col-time) 1fr var(--col-instr) var(--col-spots);
       column-gap: 16px;
-      padding: 12px 48px;
+      padding: 12px var(--side-pad);
       border-bottom: 1px solid var(--border);
       position: relative;
       animation: fadeUp 0.4s ease both;
@@ -178,7 +185,7 @@
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 16px 48px 12px;
+      padding: 16px var(--side-pad) 12px;
       background: var(--bg3);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
@@ -230,7 +237,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      margin-top: 7px;
+      margin-top: var(--badge-mt);
       font-size: 0.8rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
@@ -238,7 +245,7 @@
       background: rgba(200,168,75,0.12);
       border: 1px solid rgba(200,168,75,0.25);
       border-radius: 2px;
-      padding: 3px 8px;
+      padding: 5px 10px;
     }
     .now-badge-dot {
       width: 5px; height: 5px;
@@ -250,7 +257,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      margin-top: 7px;
+      margin-top: var(--badge-mt);
       font-size: 0.8rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
@@ -258,7 +265,7 @@
       background: rgba(201,168,112,0.1);
       border: 1px solid rgba(201,168,112,0.25);
       border-radius: 2px;
-      padding: 3px 8px;
+      padding: 5px 10px;
     }
     .starting-soon-dot {
       width: 5px; height: 5px;
@@ -270,7 +277,7 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      margin-top: 7px;
+      margin-top: var(--badge-mt);
       font-size: 0.8rem;
       letter-spacing: 0.14em;
       text-transform: uppercase;
@@ -278,7 +285,7 @@
       background: rgba(201,112,112,0.1);
       border: 1px solid rgba(201,112,112,0.25);
       border-radius: 2px;
-      padding: 3px 8px;
+      padding: 5px 10px;
     }
     .ending-soon-dot {
       width: 5px; height: 5px;
@@ -370,12 +377,25 @@
       padding: 4px 10px;
     }
     .spots-waiting {
-      font-size: 0.68rem;
-      letter-spacing: 0.08em;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: #C9A870;
-      margin-top: 4px;
-      text-align: right;
+      background: rgba(201,168,112,0.1);
+      border: 1px solid rgba(201,168,112,0.3);
+      border-radius: 4px;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+    .spots-waiting-dot {
+      width: 4px; height: 4px;
+      background: #C9A870;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
 
     .list-state {
@@ -393,7 +413,7 @@
 
     /* Footer */
     .footer {
-      padding: 16px 48px;
+      padding: 16px var(--side-pad);
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
@@ -407,6 +427,32 @@
       color: var(--text-dim);
     }
     .footer-right { font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.06em; }
+
+    /* ── Portrait 1080p (e.g. 1080×1920 vertical sign) ── */
+    @media (orientation: portrait) and (min-width: 900px) {
+      :root {
+        --side-pad:      32px;
+        --col-time:      110px;
+        --col-instr:     120px;
+        --col-spots:      95px;
+        --hdr-col-time:   90px;
+        --hdr-col-spots:  70px;
+        --badge-mt:        8px;
+      }
+    }
+
+    /* ── Landscape 1080p (e.g. 1920×1080 wall TV) ── */
+    @media (orientation: landscape) and (min-height: 900px) and (min-width: 1600px) {
+      :root {
+        --side-pad:      80px;
+        --col-time:      150px;
+        --col-instr:     180px;
+        --col-spots:     130px;
+        --hdr-col-time:  120px;
+        --hdr-col-spots: 100px;
+        --badge-mt:       12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -579,10 +625,12 @@
     let activePanel = 'a';
     let firstLoad = true;
 
-    // Estimate row height in px — larger fonts mean taller rows (~105px).
-    // Used to decide how many days to show; CSS flex fills any remaining space.
-    const ROW_H     = 105;
-    const DIVIDER_H = 55;
+    // Estimate row height in px — used to decide how many days to show.
+    // Portrait screens are taller so use smaller estimates to show more days.
+    // CSS flex fills any remaining space regardless.
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const ROW_H     = isPortrait ? 90  : 105;
+    const DIVIDER_H = isPortrait ? 48  : 55;
 
     function groupByDay(classes) {
       const map = new Map();
@@ -610,7 +658,7 @@
 
       // Keep adding days until we fill the screen
       let html = '';
-      let usedH = 290; // chrome height: header ~195 + col-heads ~50 + footer ~50 - overlap
+      let usedH = isPortrait ? 260 : 290; // chrome: header + col-heads + footer
       let daysUsed = 0;
 
       const today    = brisbaneMidnight(now);
@@ -732,7 +780,7 @@
         spotsText = `<div class="spots-open-text">Open</div>`;
       } else if (left === 0) {
         const waitHtml = waitlist > 0
-          ? `<div class="spots-waiting">${waitlist} waiting</div>` : '';
+          ? `<div class="spots-waiting"><span class="spots-waiting-dot"></span>Waitlist · ${waitlist}</div>` : '';
         spotsText = `<div><div class="spots-full-badge">Full</div>${waitHtml}</div>`;
       } else {
         const cls = left <= LOW_SPOTS_THRESHOLD ? 'low' : 'open';
