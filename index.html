@@ -288,7 +288,14 @@
     }
 
     /* Class info */
-    .class-info { padding-right: 12px; }
+    .class-info { display: flex; align-items: center; gap: 10px; padding-right: 12px; }
+    .class-icon {
+      width: 32px; height: 32px;
+      border-radius: 4px;
+      object-fit: cover;
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
     .class-name {
       font-size: 1.4rem;
       font-weight: 400;
@@ -353,6 +360,14 @@
       border: 1px solid rgba(201,112,112,0.35);
       border-radius: 4px;
       padding: 4px 10px;
+    }
+    .spots-waiting {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #C9A870;
+      margin-top: 4px;
+      text-align: right;
     }
 
     .list-state {
@@ -662,6 +677,8 @@
 
       const name = escapeHtml(c.classType?.name || 'Class');
       const zone = c.clubZone?.name || c.clubZone?.shortName || null;
+      const rawIcon = c.classType?.iconUrl || c.classType?.photoUrl || null;
+      const iconUrl = rawIcon && /^https?:\/\//.test(rawIcon) ? escapeHtml(rawIcon) : null;
 
       const rowClass = isNow          ? 'now'
                      : isStartingSoon ? 'starting-soon'
@@ -688,11 +705,16 @@
         ? `<div class="spots-bar"><div class="spots-bar-fill" style="height:${pct}%;background:${barClr}"></div></div>`
         : '';
 
+      const waitlist = c.waitingListCount ?? c.waitListCount
+                     ?? c.waitingCount    ?? c.attendeesOnWaitingList ?? 0;
+
       let spotsText;
       if (limit === 0) {
         spotsText = `<div class="spots-open-text">Open</div>`;
       } else if (left === 0) {
-        spotsText = `<div class="spots-full-badge">Full</div>`;
+        const waitHtml = waitlist > 0
+          ? `<div class="spots-waiting">${waitlist} waiting</div>` : '';
+        spotsText = `<div><div class="spots-full-badge">Full</div>${waitHtml}</div>`;
       } else {
         const cls = left <= LOW_SPOTS_THRESHOLD ? 'low' : 'open';
         spotsText = `<div><div class="spots-num ${cls}">${left}</div><div class="spots-lbl">spots</div></div>`;
@@ -703,8 +725,11 @@
         <div class="class-row ${rowClass}" style="${animate ? `animation-delay:${i * 0.04}s` : 'animation:none'}">
           <div>${timeCell}</div>
           <div class="class-info">
-            <div class="class-name">${name}</div>
-            ${zone ? `<div class="class-zone"><span>${escapeHtml(zone)}</span></div>` : ''}
+            ${iconUrl ? `<img class="class-icon" src="${iconUrl}" alt="" onerror="this.style.display='none'">` : ''}
+            <div>
+              <div class="class-name">${name}</div>
+              ${zone ? `<div class="class-zone"><span>${escapeHtml(zone)}</span></div>` : ''}
+            </div>
           </div>
           <div class="class-instructor">${instructor}</div>
           <div class="class-spots">${spotsHtml}</div>
