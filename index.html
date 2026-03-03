@@ -164,7 +164,7 @@
     /* Class row — stretches to fill available height */
     .class-row {
       display: grid;
-      grid-template-columns: 130px 1fr 140px 90px;
+      grid-template-columns: 130px 1fr 140px 110px;
       column-gap: 16px;
       padding: 12px 48px;
       border-bottom: 1px solid var(--border);
@@ -204,6 +204,13 @@
       background: var(--gold);
     }
     .class-row.tomorrow { opacity: 0.6; }
+    .class-row.starting-soon::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: #C9A870;
+    }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(8px); }
@@ -239,6 +246,46 @@
       border-radius: 50%;
       animation: pulse 1.5s ease-in-out infinite;
     }
+    .starting-soon-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 7px;
+      font-size: 0.8rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #C9A870;
+      background: rgba(201,168,112,0.1);
+      border: 1px solid rgba(201,168,112,0.25);
+      border-radius: 2px;
+      padding: 3px 8px;
+    }
+    .starting-soon-dot {
+      width: 5px; height: 5px;
+      background: #C9A870;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .ending-soon-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 7px;
+      font-size: 0.8rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #C97070;
+      background: rgba(201,112,112,0.1);
+      border: 1px solid rgba(201,112,112,0.25);
+      border-radius: 2px;
+      padding: 3px 8px;
+    }
+    .ending-soon-dot {
+      width: 5px; height: 5px;
+      background: #C97070;
+      border-radius: 50%;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
 
     /* Class info */
     .class-info { padding-right: 12px; }
@@ -266,11 +313,24 @@
       font-weight: 300;
     }
 
-    .class-spots { text-align: right; }
+    .class-spots { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+    .spots-bar {
+      width: 4px; height: 36px;
+      background: var(--border);
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .spots-bar-fill {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      border-radius: 2px;
+      transition: height 0.6s ease;
+    }
     .spots-num { font-size: 1.85rem; font-weight: 500; line-height: 1; }
     .spots-num.open { color: #7BBF90; }
     .spots-num.low  { color: #C9A870; }
-    .spots-num.full { color: #C97070; }
     .spots-lbl {
       font-size: 0.75rem;
       color: var(--text-dim);
@@ -283,6 +343,16 @@
       color: #7BBF90;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+    .spots-full-badge {
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #C97070;
+      background: rgba(201,112,112,0.12);
+      border: 1px solid rgba(201,112,112,0.35);
+      border-radius: 4px;
+      padding: 4px 10px;
     }
 
     .list-state {
@@ -360,9 +430,12 @@
 
   <script>
     const WORKER_URL          = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
+    const CACHE_KEY           = 'atria-classes-cache';
     const REFRESH_MINS        = 5;
     const TICK_SECS           = 30;
-    const LOW_SPOTS_THRESHOLD = 3;
+    const LOW_SPOTS_THRESHOLD  = 3;
+    const STARTING_SOON_MINS   = 15;
+    const ENDING_SOON_MINS     = 10;
 
     const pad = n => String(n).padStart(2, '0');
 
@@ -450,6 +523,7 @@
           c.classType.isDeleted === false
         );
         cachedClasses.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(cachedClasses)); } catch (_) {}
 
         renderClasses(now);
         document.getElementById('footer-time').textContent = `Updated ${fmt(now.toISOString())}`;
@@ -572,6 +646,12 @@
       const end   = new Date(c.endDate);
       const isNow = !isFuture && now >= start && now < end;
 
+      const msTillStart    = start - now;
+      const msTillEnd      = end - now;
+      const isStartingSoon = !isFuture && !isNow && msTillStart > 0
+                             && msTillStart <= STARTING_SOON_MINS * 60000;
+      const isEndingSoon   = isNow && msTillEnd <= ENDING_SOON_MINS * 60000;
+
       const limit = c.attendeesLimit || 0;
       const taken = c.attendeesCount || 0;
       const left  = Math.max(0, limit - taken);
@@ -582,24 +662,42 @@
 
       const name = escapeHtml(c.classType?.name || 'Class');
       const zone = c.clubZone?.name || c.clubZone?.shortName || null;
-      const rowClass = isNow ? 'now' : isFuture ? 'tomorrow' : '';
 
-      const timeCell = isNow
+      const rowClass = isNow          ? 'now'
+                     : isStartingSoon ? 'starting-soon'
+                     : isFuture       ? 'tomorrow'
+                     : '';
+
+      const timeCell = isNow && isEndingSoon
+        ? `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="ending-soon-badge"><span class="ending-soon-dot"></span>Ending Soon</div>`
+        : isNow
         ? `<div class="time-start">${fmt(c.startDate)}</div>
            <div class="now-badge"><span class="now-badge-dot"></span>In Progress</div>`
+        : isStartingSoon
+        ? `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="starting-soon-badge"><span class="starting-soon-dot"></span>Starting Soon</div>`
         : `<div class="time-start">${fmt(c.startDate)}</div>
            <div class="time-end">${fmt(c.endDate)}</div>`;
 
-      let spotsHtml;
+      const pct    = limit > 0 ? Math.min(100, (taken / limit) * 100) : 0;
+      const barClr = left === 0              ? '#C97070'
+                   : left <= LOW_SPOTS_THRESHOLD ? '#C9A870'
+                   : '#7BBF90';
+      const bar = limit > 0
+        ? `<div class="spots-bar"><div class="spots-bar-fill" style="height:${pct}%;background:${barClr}"></div></div>`
+        : '';
+
+      let spotsText;
       if (limit === 0) {
-        spotsHtml = `<div class="spots-open-text">Open</div>`;
+        spotsText = `<div class="spots-open-text">Open</div>`;
       } else if (left === 0) {
-        spotsHtml = `<div class="spots-num full">Full</div>`;
+        spotsText = `<div class="spots-full-badge">Full</div>`;
       } else {
-        const spotsClass = left <= LOW_SPOTS_THRESHOLD ? 'low' : 'open';
-        spotsHtml = `<div class="spots-num ${spotsClass}">${left}</div>
-                     <div class="spots-lbl">spots</div>`;
+        const cls = left <= LOW_SPOTS_THRESHOLD ? 'low' : 'open';
+        spotsText = `<div><div class="spots-num ${cls}">${left}</div><div class="spots-lbl">spots</div></div>`;
       }
+      const spotsHtml = bar + spotsText;
 
       return `
         <div class="class-row ${rowClass}" style="${animate ? `animation-delay:${i * 0.04}s` : 'animation:none'}">
@@ -612,6 +710,16 @@
           <div class="class-spots">${spotsHtml}</div>
         </div>`;
     }
+
+    // Show cached data immediately if available (eliminates loading spinner on reload)
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        cachedClasses = JSON.parse(raw);
+        renderClasses(new Date());
+        showApp();
+      }
+    } catch (_) {}
 
     loadClasses();
     setInterval(loadClasses, REFRESH_MINS * 60 * 1000);
