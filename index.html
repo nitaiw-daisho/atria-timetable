@@ -95,6 +95,20 @@
       text-transform: uppercase;
       color: var(--text-mid);
     }
+    .header-clock {
+      font-size: 2.2rem;
+      font-weight: 300;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .clock-ampm {
+      font-size: 1rem;
+      color: var(--text-mid);
+      margin-left: 6px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
     .live {
       display: flex;
       align-items: center;
@@ -220,6 +234,16 @@
       background: #C9A870;
     }
 
+    .class-row-progress {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: var(--gold);
+      opacity: 0.45;
+      border-radius: 0 2px 2px 0;
+      pointer-events: none;
+    }
+
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -332,6 +356,16 @@
       padding: 2px 8px;
       letter-spacing: 0.04em;
     }
+    .class-meta { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .class-category-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      padding: 2px 7px;
+      opacity: 0.8;
+    }
 
     .class-instructor {
       font-size: 1.1rem;
@@ -343,9 +377,9 @@
 
     .class-spots { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
     .spots-bar {
-      width: 4px; height: 36px;
+      width: 6px; height: 40px;
       background: var(--border);
-      border-radius: 2px;
+      border-radius: 3px;
       position: relative;
       overflow: hidden;
       flex-shrink: 0;
@@ -523,6 +557,7 @@
       <div class="header-rule"></div>
       <div class="header-meta">
         <div class="header-date" id="header-date"></div>
+        <div class="header-clock" id="header-clock"></div>
         <div class="live"><span class="live-dot"></span>Live</div>
       </div>
     </div>
@@ -678,6 +713,18 @@
       timeZone: 'Australia/Brisbane', weekday: 'long', day: 'numeric', month: 'long'
     });
 
+    function updateClock() {
+      const el = document.getElementById('header-clock');
+      if (!el) return;
+      const t = new Date().toLocaleTimeString('en-AU', {
+        timeZone: 'Australia/Brisbane', hour: '2-digit', minute: '2-digit', hour12: true
+      });
+      const parts = t.split(' ');
+      const time = parts[0];
+      const ampm = parts[1] || '';
+      el.innerHTML = `${time}<span class="clock-ampm">${ampm}</span>`;
+    }
+
     function showError(msg) {
       document.getElementById('loading').style.display      = 'none';
       document.getElementById('app').style.display          = 'none';
@@ -690,6 +737,7 @@
       document.getElementById('error-screen').style.display = 'none';
       document.getElementById('app').style.display          = 'flex';
       document.getElementById('header-date').textContent    = fmtDate(new Date());
+      updateClock();
     }
 
     let cachedClasses = [];
@@ -748,6 +796,7 @@
         const now = new Date();
         renderClasses(now);
         document.getElementById('header-date').textContent = fmtDate(now);
+        updateClock();
       }
     }
 
@@ -886,6 +935,9 @@
 
       const name = escapeHtml(c.classType?.name || 'Class');
       const zone = c.clubZone?.name || c.clubZone?.shortName || null;
+      const classMeta = CLASS_MASTER[c.classType?.name || ''];
+      const category  = classMeta?.category || null;
+      const categoryColor = category ? (CATEGORY_COLORS[category] || '#6E6E7E') : null;
       const rawIcon  = c.classType?.iconUrl || c.classType?.photoUrl || null;
       const iconUrl  = rawIcon && /^https?:\/\//.test(rawIcon) ? escapeHtml(rawIcon) : null;
       const letter   = (c.classType?.name || '?')[0].toUpperCase();
@@ -899,10 +951,7 @@
                      : isFuture       ? 'tomorrow'
                      : '';
 
-      const durMins = Math.round((end - start) / 60000);
-      const durText = durMins >= 60
-        ? `${Math.floor(durMins / 60)}h${durMins % 60 > 0 ? ` ${durMins % 60}m` : ''}`
-        : `${durMins} min`;
+      const endTimeText = `– ${fmt(c.endDate)}`;
 
       const minsToStart = Math.ceil(msTillStart / 60000);
       const timeCell = isNow && isEndingSoon
@@ -915,7 +964,7 @@
         ? `<div class="time-start">${fmt(c.startDate)}</div>
            <div class="starting-soon-badge"><span class="starting-soon-dot"></span>Starts in ${minsToStart}&nbsp;min</div>`
         : `<div class="time-start">${fmt(c.startDate)}</div>
-           <div class="time-end">${durText}</div>`;
+           <div class="time-end">${endTimeText}</div>`;
 
       const pct    = limit > 0 ? Math.min(100, (taken / limit) * 100) : 0;
       const barClr = left === 0              ? '#C97070'
@@ -942,6 +991,13 @@
       }
       const spotsHtml = bar + spotsText;
 
+      const elapsedPct = isNow
+        ? Math.min(100, Math.round(((now - start) / (end - start)) * 100))
+        : 0;
+      const progressBar = isNow
+        ? `<div class="class-row-progress" style="width:${elapsedPct}%"></div>`
+        : '';
+
       return `
         <div class="class-row ${rowClass}" style="${animate ? `animation-delay:${i * 0.04}s` : 'animation:none'}">
           <div class="class-time">${timeCell}</div>
@@ -949,11 +1005,15 @@
             ${iconHtml}
             <div>
               <div class="class-name">${name}</div>
-              ${zone ? `<div class="class-zone"><span>${escapeHtml(zone)}</span></div>` : ''}
+              ${(category || zone) ? `<div class="class-meta">
+                ${category ? `<span class="class-category-badge" style="background:${categoryColor}22;border:1px solid ${categoryColor}55;color:${categoryColor}">${escapeHtml(category)}</span>` : ''}
+                ${zone ? `<span class="class-zone"><span>${escapeHtml(zone)}</span></span>` : ''}
+              </div>` : ''}
             </div>
           </div>
           <div class="class-instructor">${instructor}</div>
           <div class="class-spots">${spotsHtml}</div>
+          ${progressBar}
         </div>`;
     }
 
