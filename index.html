@@ -224,6 +224,10 @@
       from { opacity: 0; transform: translateY(8px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+    @keyframes urgentPulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.45; }
+    }
 
     /* Time cell */
     .class-time { padding-right: 8px; }
@@ -355,6 +359,7 @@
     .spots-num { font-size: 1.85rem; font-weight: 500; line-height: 1; }
     .spots-num.open { color: #7BBF90; }
     .spots-num.low  { color: #C9A870; }
+    .spots-num.urgent { animation: urgentPulse 1.4s ease-in-out infinite; }
     .spots-lbl {
       font-size: 0.75rem;
       color: var(--text-dim);
@@ -405,12 +410,17 @@
       align-items: center;
       justify-content: center;
       flex-direction: column;
-      gap: 18px;
+      gap: 10px;
       position: absolute;
       inset: 0;
       color: var(--text-dim);
       font-size: 1.1rem;
       letter-spacing: 0.1em;
+    }
+    .list-state-sub {
+      font-size: 0.88rem;
+      opacity: 0.55;
+      letter-spacing: 0.08em;
     }
 
     /* Footer */
@@ -688,7 +698,24 @@
       const visible = cachedClasses.filter(c => new Date(c.endDate) > now);
 
       if (!visible.length) {
-        swapPanel('<div class="list-state"><span>No upcoming classes scheduled</span></div>');
+        const hour = parseInt(new Intl.DateTimeFormat('en', {
+          timeZone: 'Australia/Brisbane', hour: 'numeric', hourCycle: 'h23'
+        }).format(now));
+        let msg, sub;
+        if (hour >= 21) {
+          msg = 'No more classes tonight';
+          sub = 'See you tomorrow!';
+        } else if (hour < 7) {
+          msg = 'Classes start soon';
+          sub = "Today's timetable will appear here shortly";
+        } else {
+          msg = 'No upcoming classes scheduled';
+          sub = 'Check back soon';
+        }
+        swapPanel(`<div class="list-state">
+          <span>${msg}</span>
+          <span class="list-state-sub">${sub}</span>
+        </div>`);
         return;
       }
 
@@ -790,6 +817,12 @@
                      : isFuture       ? 'tomorrow'
                      : '';
 
+      const durMins = Math.round((end - start) / 60000);
+      const durText = durMins >= 60
+        ? `${Math.floor(durMins / 60)}h${durMins % 60 > 0 ? ` ${durMins % 60}m` : ''}`
+        : `${durMins} min`;
+
+      const minsToStart = Math.ceil(msTillStart / 60000);
       const timeCell = isNow && isEndingSoon
         ? `<div class="time-start">${fmt(c.startDate)}</div>
            <div class="ending-soon-badge"><span class="ending-soon-dot"></span>Ending Soon</div>`
@@ -798,9 +831,9 @@
            <div class="now-badge"><span class="now-badge-dot"></span>In Progress</div>`
         : isStartingSoon
         ? `<div class="time-start">${fmt(c.startDate)}</div>
-           <div class="starting-soon-badge"><span class="starting-soon-dot"></span>Starting Soon</div>`
+           <div class="starting-soon-badge"><span class="starting-soon-dot"></span>Starts in ${minsToStart}&nbsp;min</div>`
         : `<div class="time-start">${fmt(c.startDate)}</div>
-           <div class="time-end">${fmt(c.endDate)}</div>`;
+           <div class="time-end">${durText}</div>`;
 
       const pct    = limit > 0 ? Math.min(100, (taken / limit) * 100) : 0;
       const barClr = left === 0              ? '#C97070'
@@ -822,7 +855,8 @@
         spotsText = `<div><div class="spots-full-badge">Full</div>${waitHtml}</div>`;
       } else {
         const cls = left <= LOW_SPOTS_THRESHOLD ? 'low' : 'open';
-        spotsText = `<div><div class="spots-num ${cls}">${left}</div><div class="spots-lbl">spots</div></div>`;
+        const urgentClass = left <= 2 ? ' urgent' : '';
+        spotsText = `<div><div class="spots-num ${cls}${urgentClass}">${left}</div><div class="spots-lbl">spots</div></div>`;
       }
       const spotsHtml = bar + spotsText;
 
