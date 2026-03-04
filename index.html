@@ -19,7 +19,7 @@
       --font: 'Century Gothic', 'Trebuchet MS', 'Gill Sans', sans-serif;
       --side-pad:      48px;
       --col-gap:       24px;
-      --col-time:      130px;
+      --col-time:      175px;
       --col-instr:     140px;
       --col-spots:     110px;
       --badge-mt:       10px;
@@ -265,66 +265,72 @@
     .now-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       margin-top: var(--badge-mt);
-      font-size: 0.8rem;
-      letter-spacing: 0.14em;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      white-space: nowrap;
       color: var(--gold);
       background: rgba(200,168,75,0.12);
       border: 1px solid rgba(200,168,75,0.25);
       border-radius: 2px;
-      padding: 5px 10px;
+      padding: 2px 8px;
     }
     .now-badge-dot {
       width: 5px; height: 5px;
       background: var(--gold);
       border-radius: 50%;
+      flex-shrink: 0;
       animation: pulse 1.5s ease-in-out infinite;
     }
     .starting-soon-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       margin-top: var(--badge-mt);
-      font-size: 0.8rem;
-      letter-spacing: 0.14em;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      white-space: nowrap;
       color: #C9A870;
       background: rgba(201,168,112,0.1);
       border: 1px solid rgba(201,168,112,0.25);
       border-radius: 2px;
-      padding: 5px 10px;
+      padding: 2px 8px;
     }
     .starting-soon-dot {
       width: 5px; height: 5px;
       background: #C9A870;
       border-radius: 50%;
+      flex-shrink: 0;
       animation: pulse 2s ease-in-out infinite;
     }
     .ending-soon-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       margin-top: var(--badge-mt);
-      font-size: 0.8rem;
-      letter-spacing: 0.14em;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
+      white-space: nowrap;
       color: #C97070;
       background: rgba(201,112,112,0.1);
       border: 1px solid rgba(201,112,112,0.25);
       border-radius: 2px;
-      padding: 5px 10px;
+      padding: 2px 8px;
     }
     .ending-soon-dot {
       width: 5px; height: 5px;
       background: #C97070;
       border-radius: 50%;
+      flex-shrink: 0;
       animation: pulse 1.2s ease-in-out infinite;
     }
 
     /* Class info */
-    .class-info { display: flex; align-items: flex-start; padding-right: 12px; }
+    .class-info { display: flex; align-items: flex-start; padding-left: 12px; padding-right: 12px; }
     .class-name {
       font-size: 1.4rem;
       font-weight: 400;
@@ -465,7 +471,7 @@
       :root {
         --side-pad:      32px;
         --col-gap:       20px;
-        --col-time:      110px;
+        --col-time:      175px;
         --col-instr:     120px;
         --col-spots:      95px;
         --badge-mt:        8px;
@@ -477,7 +483,7 @@
       :root {
         --side-pad:      80px;
         --col-gap:       28px;
-        --col-time:      150px;
+        --col-time:      185px;
         --col-instr:     180px;
         --col-spots:     130px;
         --badge-mt:       12px;
