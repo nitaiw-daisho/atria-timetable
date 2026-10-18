@@ -1,1 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atria Wellness Club – Today's Classes</title>
+  <style>
+    :root {
+      --bg:        #0D0D0D;
+      --bg2:       #141414;
+      --bg3:       #111111;
+      --gold:      #C8A84B;
+      --gold-dim:  rgba(200,168,75,0.12);
+      --gold-line: rgba(200,168,75,0.35);
+      --text:      #F2EEE6;
+      --text-mid:  rgba(242,238,230,0.6);
+      --text-dim:  rgba(242,238,230,0.35);
+      --border:    rgba(242,238,230,0.08);
+      --font: 'Century Gothic', 'Trebuchet MS', 'Gill Sans', sans-serif;
+      --side-pad:      48px;
+      --col-gap:       24px;
+      --col-time:      175px;
+      --col-instr:     140px;
+      --col-spots:     110px;
+      --badge-mt:       10px;
+    }
 
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-weight: 300;
+      overflow: hidden;
+    }
+
+    .screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 28px;
+      padding: 60px;
+      text-align: center;
+    }
+    .screen img { width: 220px; filter: brightness(1.1); }
+    .screen p {
+      font-size: 1rem;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      max-width: 340px;
+      line-height: 1.8;
+    }
+    .sep { width: 48px; height: 1px; background: var(--gold); opacity: 0.5; }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 1px solid var(--border);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Main app ── */
+    #app {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header { padding: 36px var(--side-pad) 24px; flex-shrink: 0; }
+    .header img {
+      width: 220px;
+      display: block;
+      margin-bottom: 24px;
+      filter: brightness(1.1);
+    }
+    .header-rule {
+      height: 1px;
+      background: linear-gradient(90deg, var(--gold) 0%, transparent 60%);
+      opacity: 0.45;
+      margin-bottom: 18px;
+    }
+    .header-meta { display: flex; justify-content: space-between; align-items: center; }
+    .header-date {
+      font-size: 1.1rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-mid);
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .header-clock {
+      font-size: 1.3rem;
+      font-weight: 300;
+      color: var(--gold);
+      letter-spacing: 0.06em;
+      line-height: 1;
+    }
+    .clock-ampm {
+      font-size: 1.1rem;
+      color: var(--text-mid);
+      margin-left: 5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.1rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-mid);
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      background: var(--gold);
+      border-radius: 50%;
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    /* Column headers */
+    .col-heads {
+      display: grid;
+      grid-template-columns: var(--col-time) 1fr var(--col-instr) var(--col-spots);
+      column-gap: var(--col-gap);
+      padding: 16px var(--side-pad);
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .col-head {
+      font-size: 0.88rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 400;
+    }
+    .col-head.right { text-align: right; }
+    .col-heads .col-head:nth-child(2) { padding-left: 12px; }
+
+    /* List area — flex so rows can grow to fill */
+    #classes-list {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Two panels crossfade between each other */
+    .list-panel {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      transition: opacity 0.6s ease;
+    }
+    .list-panel::-webkit-scrollbar { width: 2px; }
+    .list-panel::-webkit-scrollbar-thumb { background: var(--gold-line); }
+    .list-panel.hidden { opacity: 0; pointer-events: none; }
+
+    /* Day group — flex value set per-group by JS, proportional to row count */
+    .day-group {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    /* Rows wrapper — grows to fill day-group height */
+    .rows-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Class row — stretches to fill available height */
+    .class-row {
+      display: grid;
+      grid-template-columns: var(--col-time) 1fr var(--col-instr) var(--col-spots);
+      column-gap: var(--col-gap);
+      padding: 12px var(--side-pad);
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      animation: fadeUp 0.4s ease both;
+      flex: 1;
+      min-height: 64px;
+      align-items: center;
+    }
+    .day-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px var(--side-pad) 12px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .day-divider-label {
+      font-size: 0.88rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 400;
+      white-space: nowrap;
+    }
+    .day-divider-line { flex: 1; height: 1px; background: var(--border); }
+
+    .class-row.now {
+      background: var(--gold-dim);
+    }
+    .class-row.now::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--gold);
+    }
+    .class-row.tomorrow { opacity: 0.6; }
+    .class-row.starting-soon::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: #C9A870;
+    }
+
+    .class-row-progress {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: var(--gold);
+      opacity: 0.45;
+      border-radius: 0 2px 2px 0;
+      pointer-events: none;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes urgentPulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.45; }
+    }
+
+    /* Time cell */
+    .class-time { padding-right: 8px; }
+    .time-start {
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--gold);
+      line-height: 1.2;
+    }
+    .time-end { font-size: 0.95rem; color: var(--text-dim); margin-top: 5px; }
+
+    .now-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: var(--badge-mt);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: var(--gold);
+      background: rgba(200,168,75,0.12);
+      border: 1px solid rgba(200,168,75,0.25);
+      border-radius: 2px;
+      padding: 2px 8px;
+    }
+    .now-badge-dot {
+      width: 5px; height: 5px;
+      background: var(--gold);
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .starting-soon-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: var(--badge-mt);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: #C9A870;
+      background: rgba(201,168,112,0.1);
+      border: 1px solid rgba(201,168,112,0.25);
+      border-radius: 2px;
+      padding: 2px 8px;
+    }
+    .starting-soon-dot {
+      width: 5px; height: 5px;
+      background: #C9A870;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    .ending-soon-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: var(--badge-mt);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: #C97070;
+      background: rgba(201,112,112,0.1);
+      border: 1px solid rgba(201,112,112,0.25);
+      border-radius: 2px;
+      padding: 2px 8px;
+    }
+    .ending-soon-dot {
+      width: 5px; height: 5px;
+      background: #C97070;
+      border-radius: 50%;
+      flex-shrink: 0;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+
+    /* Class info */
+    .class-info { display: flex; align-items: flex-start; padding-left: 12px; padding-right: 12px; }
+    .class-name {
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .class-zone { font-size: 0.75rem; color: var(--text-dim); margin-top: 6px; }
+    .class-zone span {
+      display: inline-block;
+      background: rgba(200,168,75,0.07);
+      border: 1px solid rgba(200,168,75,0.18);
+      border-radius: 2px;
+      padding: 2px 8px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .class-meta { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+    .class-meta .class-zone { margin-top: 0; }
+    .class-category-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      border-radius: 2px;
+      padding: 2px 7px;
+      opacity: 0.8;
+    }
+
+    .class-instructor {
+      font-size: 1.1rem;
+      color: var(--text-mid);
+      padding-right: 10px;
+      line-height: 1.5;
+      font-weight: 300;
+    }
+
+    .class-spots { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+    .spots-bar {
+      width: 6px; height: 40px;
+      background: var(--border);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .spots-bar-fill {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      border-radius: 2px;
+      transition: height 0.6s ease;
+    }
+    .spots-num { font-size: 1.85rem; font-weight: 500; line-height: 1; }
+    .spots-num.open { color: #7BBF90; }
+    .spots-num.low  { color: #C9A870; }
+    .spots-num.urgent { animation: urgentPulse 1.4s ease-in-out infinite; }
+    .spots-lbl {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-top: 5px;
+    }
+    .spots-open-text {
+      font-size: 0.88rem;
+      color: #7BBF90;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .spots-full-badge {
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #C97070;
+      background: rgba(201,112,112,0.12);
+      border: 1px solid rgba(201,112,112,0.35);
+      border-radius: 4px;
+      padding: 4px 10px;
+    }
+    .spots-waiting {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #C9A870;
+      background: rgba(201,168,112,0.1);
+      border: 1px solid rgba(201,168,112,0.3);
+      border-radius: 4px;
+      padding: 3px 8px;
+      white-space: nowrap;
+    }
+    .spots-waiting-dot {
+      width: 4px; height: 4px;
+      background: #C9A870;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .list-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+      position: absolute;
+      inset: 0;
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+    }
+    .list-state-sub {
+      font-size: 0.88rem;
+      opacity: 0.55;
+      letter-spacing: 0.08em;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 16px var(--side-pad);
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .footer-left {
+      font-size: 0.85rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .footer-right { font-size: 0.85rem; color: var(--text-dim); letter-spacing: 0.06em; }
+
+    /* ── Portrait 1080p (e.g. 1080×1920 vertical sign) ── */
+    @media (orientation: portrait) and (min-width: 900px) {
+      :root {
+        --side-pad:      32px;
+        --col-gap:       20px;
+        --col-time:      175px;
+        --col-instr:     120px;
+        --col-spots:      95px;
+        --badge-mt:        8px;
+      }
+    }
+
+    /* ── Landscape 1080p (e.g. 1920×1080 wall TV) ── */
+    @media (orientation: landscape) and (min-height: 900px) and (min-width: 1600px) {
+      :root {
+        --side-pad:      80px;
+        --col-gap:       28px;
+        --col-time:      185px;
+        --col-instr:     180px;
+        --col-spots:     130px;
+        --badge-mt:       12px;
+      }
+      .header img { width: 240px; }
+    }
+
+    /* ── Mobile / small tablet — hide the timetable, show a redirect notice ── */
+    @media (max-width: 899px) {
+      #loading, #error-screen, #app { display: none !important; }
+      #mobile-screen { display: flex !important; }
+    }
+    @media (min-width: 900px) {
+      #mobile-screen { display: none !important; }
+    }
+    #mobile-screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 28px;
+      padding: 48px 32px;
+      text-align: center;
+    }
+    #mobile-screen img { width: 180px; filter: brightness(1.1); }
+    #mobile-screen .sep { width: 40px; height: 1px; background: var(--gold); opacity: 0.5; }
+    #mobile-screen p {
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      max-width: 300px;
+      line-height: 1.9;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="mobile-screen">
+    <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
+    <div class="sep"></div>
+    <p>This display is designed for a 1080p screen.<br>Please view on the club's timetable display.</p>
+  </div>
+
+  <div id="loading" class="screen">
+    <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
+    <div class="spinner"></div>
+    <p>Loading today's schedule...</p>
+  </div>
+
+  <div id="error-screen" class="screen" style="display:none;">
+    <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
+    <div class="sep"></div>
+    <p id="error-msg">Unable to connect. Please check configuration.</p>
+  </div>
+
+  <div id="app">
+    <div class="header">
+      <img src="https://www.daisho-aus.com/wp-content/uploads/2025/07/logo-atria.png" alt="Atria Wellness Club">
+      <div class="header-rule"></div>
+      <div class="header-meta">
+        <div class="header-date" id="header-date"></div>
+        <div class="header-right">
+          <div class="header-clock" id="header-clock"></div>
+          <div class="live"><span class="live-dot"></span>Live</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-heads">
+      <div class="col-head">Time</div>
+      <div class="col-head">Class</div>
+      <div class="col-head">Instructor</div>
+      <div class="col-head right">Spots</div>
+    </div>
+
+    <div id="classes-list">
+      <div id="panel-a" class="list-panel"></div>
+      <div id="panel-b" class="list-panel hidden"></div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-left" id="footer-label">Today's Schedule &nbsp;·&nbsp; 180–192 Ann Street, Brisbane</div>
+      <div class="footer-right" id="footer-time"></div>
+    </div>
+  </div>
+
+  <script>
+    const WORKER_URL          = 'https://atria-timetable-proxy.nitai-whitehurst.workers.dev';
+    const CACHE_KEY           = 'atria-classes-cache';
+    const REFRESH_MINS        = 5;
+    const TICK_SECS           = 30;
+    const LOW_SPOTS_THRESHOLD  = 3;
+    const STARTING_SOON_MINS   = 15;
+    const ENDING_SOON_MINS     = 10;
+
+    const pad = n => String(n).padStart(2, '0');
+
+    // HTML-encode API-derived strings before injecting into innerHTML
+    const ESC = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+    const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESC[c]);
+    // Master categorisation table — maps every known class name to its metadata.
+    // Used to drive category-based icon colours.
+    const CLASS_MASTER = {
+      'A+ Activation':            { category: 'Event',      classType: 'Free Wellness' },
+      'Preventative Health Talk': { category: 'Event',      classType: 'Free Wellness' },
+      'Sound Healing (Rooftop)':  { category: 'Yoga',       classType: 'Free Wellness' },
+      'Athletic Reformer':        { category: 'Reformer',   classType: 'Paid' },
+      'ATRIA Club Tour':          { category: 'Event',      classType: 'Free' },
+      'Barre (no heat)':          { category: 'Barre',      classType: 'Paid' },
+      'HB Lunch':                 { category: 'Pilates',    classType: 'Paid' },
+      'HBB Lunch':                { category: 'Barre',      classType: 'Paid' },
+      'Hot Barre Bell':           { category: 'Barre',      classType: 'Paid' },
+      'Hot Power Yoga':           { category: 'Yoga',       classType: 'Paid' },
+      'Hot Yoga Flow':            { category: 'Yoga',       classType: 'Paid' },
+      'HotBells (warm)':          { category: 'Functional', classType: 'Paid' },
+      'HP (Hot Pilates)':         { category: 'Pilates',    classType: 'Paid' },
+      'HP Lunch':                 { category: 'Pilates',    classType: 'Paid' },
+      'IGNITE':                   { category: 'Pilates',    classType: 'Paid' },
+      'IGNITE Lunch':             { category: 'Pilates',    classType: 'Paid' },
+      'Instructor Training':      { category: 'Event',      classType: 'Event' },
+      'Jumpboard Reformer':       { category: 'Reformer',   classType: 'Paid' },
+      'Latin Pulse':              { category: 'Functional', classType: 'Paid' },
+      'Lift HIIT':                { category: 'Functional', classType: 'Paid' },
+      'Lift Strong':              { category: 'Functional', classType: 'Paid' },
+      'Lift Sweat':               { category: 'Functional', classType: 'Paid' },
+      'Mat Pilates (no heat)':    { category: 'Pilates',    classType: 'Paid' },
+      'MELT (Free)':              { category: 'Stretch',    classType: 'Free Wellness' },
+      'Melt (warm)':              { category: 'Stretch',    classType: 'Paid' },
+      'Mez IGNITE':               { category: 'Pilates',    classType: 'Paid' },
+      'Mez Matwork Pilates':      { category: 'Pilates',    classType: 'Paid' },
+      'Mez Melt':                 { category: 'Stretch',    classType: 'Paid' },
+      'Mez Yoga':                 { category: 'Yoga',       classType: 'Paid' },
+      'New Moon Yoga':            { category: 'Yoga',       classType: 'Paid' },
+      'NO CLASSES TODAY':         { category: 'Event',      classType: 'Event' },
+      'Pilates (Free)':           { category: 'Pilates',    classType: 'Free Wellness' },
+      'Power Yoga (no heat)':     { category: 'Yoga',       classType: 'Paid' },
+      'Reformer':                 { category: 'Reformer',   classType: 'Paid' },
+      'Rooftop Mat':              { category: 'Pilates',    classType: 'Paid' },
+      'Rooftop Melt':             { category: 'Stretch',    classType: 'Paid' },
+      'Rooftop Yoga':             { category: 'Yoga',       classType: 'Paid' },
+      'RT Latin Pulse':           { category: 'Functional', classType: 'Paid' },
+      'RT Mat Pilates':           { category: 'Pilates',    classType: 'Paid' },
+      'RT Melt':                  { category: 'Stretch',    classType: 'Paid' },
+      'RT Pilates Sculpt':        { category: 'Pilates',    classType: 'Paid' },
+      'RT Power Yoga':            { category: 'Yoga',       classType: 'Paid' },
+      'RT Strike Club':           { category: 'Boxing',     classType: 'Paid' },
+      'Sound Healing':            { category: 'Yoga',       classType: 'Paid' },
+      'Stretch (Free)':           { category: 'Stretch',    classType: 'Free Wellness' },
+      'Strike Club':              { category: 'Boxing',     classType: 'Paid' },
+      'THRIVE Main Studio':       { category: 'Pilates',    classType: 'Private' },
+      'THRIVE Reformer':          { category: 'Reformer',   classType: 'Private' },
+      'THRIVE Strike Club':       { category: 'Boxing',     classType: 'Private' },
+      'Yin Yoga':                 { category: 'Yoga',       classType: 'Paid' },
+      'Yoga (Free)':              { category: 'Yoga',       classType: 'Free Wellness' },
+      'Yoga Flow (no heat)':      { category: 'Yoga',       classType: 'Paid' },
+      'Yoga Lunch':               { category: 'Yoga',       classType: 'Paid' },
+    };
+
+    // Colour per primary category
+    const CATEGORY_COLORS = {
+      'Pilates':    '#5B7FA6',  // Blue
+      'Reformer':   '#3D8B89',  // Teal
+      'Yoga':       '#7B5BA6',  // Purple
+      'Barre':      '#A65B7F',  // Pink
+      'Functional': '#C47840',  // Orange
+      'Boxing':     '#A65B5B',  // Red
+      'Stretch':    '#5BA688',  // Green
+      'Event':      '#6E6E7E',  // Grey
+    };
+
+    // Class-type colours override the category colour
+    const CLASS_TYPE_COLORS = {
+      'Free Wellness': '#A69B5B',  // Warm gold — distinguishes complimentary classes
+      'Private':       '#4A4A5A',  // Dark grey — private/THRIVE bookings
+    };
+
+    const CLASS_PALETTE = ['#5B7FA6','#A6875B','#5BA688','#A65B7F','#7B5BA6','#7BA65B'];
+    const classColor = name => {
+      const meta = CLASS_MASTER[name];
+      if (meta) {
+        if (CLASS_TYPE_COLORS[meta.classType]) return CLASS_TYPE_COLORS[meta.classType];
+        if (CATEGORY_COLORS[meta.category])    return CATEGORY_COLORS[meta.category];
+      }
+      // Fallback: hash-based colour for any unrecognised class name
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFF;
+      return CLASS_PALETTE[h % CLASS_PALETTE.length];
+    };
+
+    // Return a Date at midnight Brisbane time (UTC+10, no DST) for the given moment
+    function brisbaneMidnight(d) {
+      const p = new Intl.DateTimeFormat('en', {
+        timeZone: 'Australia/Brisbane',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      }).formatToParts(d).reduce((acc, { type, value }) => ({ ...acc, [type]: value }), {});
+      return new Date(`${p.year}-${p.month}-${p.day}T00:00:00+10:00`);
+    }
+
+    // Format a Date as a Brisbane-timezone ISO 8601 string for API queries
+    function bne(d) {
+      const p = new Intl.DateTimeFormat('en', {
+        timeZone: 'Australia/Brisbane',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hourCycle: 'h23'
+      }).formatToParts(d).reduce((acc, { type, value }) => ({ ...acc, [type]: value }), {});
+      return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}+10:00`;
+    }
+
+    const fmt = iso => new Date(iso).toLocaleTimeString('en-AU', {
+      timeZone: 'Australia/Brisbane', hour: '2-digit', minute: '2-digit', hour12: true
+    });
+    const fmtDate = d => d.toLocaleDateString('en-AU', {
+      timeZone: 'Australia/Brisbane', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+    const fmtDateShort = d => d.toLocaleDateString('en-AU', {
+      timeZone: 'Australia/Brisbane', weekday: 'long', day: 'numeric', month: 'long'
+    });
+
+    function updateClock() {
+      const el = document.getElementById('header-clock');
+      if (!el) return;
+      const t = new Date().toLocaleTimeString('en-AU', {
+        timeZone: 'Australia/Brisbane', hour: '2-digit', minute: '2-digit', hour12: true
+      });
+      const parts = t.split(' ');
+      const time = parts[0];
+      const ampm = parts[1] || '';
+      el.innerHTML = `${time}<span class="clock-ampm">${ampm}</span>`;
+    }
+
+    function showError(msg) {
+      document.getElementById('loading').style.display      = 'none';
+      document.getElementById('app').style.display          = 'none';
+      document.getElementById('error-screen').style.display = 'flex';
+      document.getElementById('error-msg').textContent      = msg || 'Unable to connect.';
+    }
+
+    function showApp() {
+      document.getElementById('loading').style.display      = 'none';
+      document.getElementById('error-screen').style.display = 'none';
+      document.getElementById('app').style.display          = 'flex';
+      document.getElementById('header-date').textContent    = fmtDate(new Date());
+      updateClock();
+    }
+
+    let cachedClasses = [];
+
+    async function loadClasses() {
+      const now = new Date();
+      const todayStart = brisbaneMidnight(now);
+      // Fetch a full week ahead so we always have enough days to fill the screen
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      weekEnd.setHours(23, 59, 59, 0);
+
+      const params = new URLSearchParams({
+        startDate: bne(todayStart),
+        endDate:   bne(weekEnd),
+      });
+
+      try {
+        const fetchController = new AbortController();
+        const fetchTimeout = setTimeout(() => fetchController.abort(), 10000);
+        let res;
+        try {
+          res = await fetch(`${WORKER_URL}?${params}`, { signal: fetchController.signal });
+        } finally {
+          clearTimeout(fetchTimeout);
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+
+        cachedClasses = (data.value || []).filter(c =>
+          c.classType &&
+          c.isDeleted === false &&
+          c.classType.isDeleted === false
+        );
+        cachedClasses.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(cachedClasses)); } catch (_) {}
+
+        renderClasses(now);
+        document.getElementById('footer-time').textContent = `Updated ${fmt(now.toISOString())}`;
+        showApp();
+      } catch (e) {
+        console.error('Load error:', e);
+        if (document.getElementById('app').style.display === 'flex') {
+          document.getElementById('footer-time').textContent = `Update failed — retrying`;
+        } else {
+          showError(`Unable to load schedule: ${e.message}`);
+        }
+      }
+    }
+
+    function tick() {
+      if (document.getElementById('app').style.display === 'flex') {
+        const now = new Date();
+        renderClasses(now);
+        document.getElementById('header-date').textContent = fmtDate(now);
+        updateClock();
+      }
+    }
+
+    // Track which panel is currently visible
+    let activePanel = 'a';
+    let firstLoad = true;
+
+    // Estimate row height in px — used to decide how many days to show.
+    // Portrait screens are taller so use smaller estimates to show more days.
+    // CSS flex fills any remaining space regardless.
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const ROW_H     = isPortrait ? 90  : 105;
+    const DIVIDER_H = isPortrait ? 48  : 55;
+
+    function groupByDay(classes) {
+      const map = new Map();
+      for (const c of classes) {
+        const midnight = brisbaneMidnight(new Date(c.startDate));
+        const key = midnight.toISOString();
+        if (!map.has(key)) map.set(key, { date: midnight, rows: [] });
+        map.get(key).rows.push(c);
+      }
+      return Array.from(map.values()).sort((a, b) => a.date - b.date);
+    }
+
+    function renderClasses(now) {
+      const screenH = window.innerHeight || 1080;
+
+      // Drop classes that have already ended
+      const visible = cachedClasses.filter(c => new Date(c.endDate) > now);
+
+      if (!visible.length) {
+        const hour = parseInt(new Intl.DateTimeFormat('en', {
+          timeZone: 'Australia/Brisbane', hour: 'numeric', hourCycle: 'h23'
+        }).format(now));
+        let msg, sub;
+        if (hour >= 21) {
+          msg = 'No more classes tonight';
+          sub = 'See you tomorrow!';
+        } else if (hour < 7) {
+          msg = 'Classes start soon';
+          sub = "Today's timetable will appear here shortly";
+        } else {
+          msg = 'No upcoming classes scheduled';
+          sub = 'Check back soon';
+        }
+        swapPanel(`<div class="list-state">
+          <span>${msg}</span>
+          <span class="list-state-sub">${sub}</span>
+        </div>`);
+        return;
+      }
+
+      const days = groupByDay(visible);
+
+      // Keep adding days until we fill the screen
+      let html = '';
+      let usedH = isPortrait ? 260 : 290; // chrome: header + col-heads + footer
+      let daysUsed = 0;
+
+      const today    = brisbaneMidnight(now);
+      const tomorrow = new Date(today.getTime() + 86400000);
+
+      for (const day of days) {
+        const dayH = DIVIDER_H + day.rows.length * ROW_H;
+        // Always show at least 1 day; keep adding while there's space
+        if (daysUsed > 0 && usedH + dayH > screenH) break;
+
+        const labelDate = day.date;
+
+        let label;
+        if (labelDate.getTime() === today.getTime())         label = `Today · ${fmtDateShort(labelDate)}`;
+        else if (labelDate.getTime() === tomorrow.getTime()) label = `Tomorrow · ${fmtDateShort(labelDate)}`;
+        else label = fmtDateShort(labelDate);
+
+        const isFuture = labelDate > today;
+
+        html += `<div class="day-group" style="flex:${day.rows.length}">
+          <div class="day-divider">
+            <span class="day-divider-label">${label}</span>
+            <span class="day-divider-line"></span>
+          </div>
+          <div class="rows-wrap">
+            ${day.rows.map((c, i) => renderRow(c, i, now, isFuture, firstLoad)).join('')}
+          </div>
+        </div>`;
+
+        usedH += dayH;
+        daysUsed++;
+      }
+
+      // Update footer label to reflect which days are actually shown
+      const footerLabel = document.getElementById('footer-label');
+      if (footerLabel) {
+        const firstIsToday = days[0].date.getTime() === today.getTime();
+        let title;
+        if      (daysUsed === 1 && firstIsToday)  title = "Today's Schedule";
+        else if (daysUsed >= 2 && firstIsToday)   title = 'Today & Tomorrow';
+        else                                       title = 'Upcoming Schedule';
+        footerLabel.innerHTML = `${title} &nbsp;·&nbsp; 180\u2013192 Ann Street, Brisbane`;
+      }
+
+      swapPanel(html);
+    }
+
+    function swapPanel(html) {
+      const inPanel  = activePanel === 'a' ? 'panel-b' : 'panel-a';
+      const outPanel = activePanel === 'a' ? 'panel-a' : 'panel-b';
+      const inEl  = document.getElementById(inPanel);
+      const outEl = document.getElementById(outPanel);
+      inEl.innerHTML = html;
+      inEl.classList.remove('hidden');
+      outEl.classList.add('hidden');
+      activePanel = activePanel === 'a' ? 'b' : 'a';
+      firstLoad = false;
+    }
+
+    function renderRow(c, i, now, isFuture, animate) {
+      const start = new Date(c.startDate);
+      const end   = new Date(c.endDate);
+      const isNow = !isFuture && now >= start && now < end;
+
+      const msTillStart    = start - now;
+      const msTillEnd      = end - now;
+      const isStartingSoon = !isFuture && !isNow && msTillStart > 0
+                             && msTillStart <= STARTING_SOON_MINS * 60000;
+      const isEndingSoon   = isNow && msTillEnd <= ENDING_SOON_MINS * 60000;
+
+      const limit = c.attendeesLimit || 0;
+      const taken = c.attendeesCount || 0;
+      const left  = Math.max(0, limit - taken);
+
+      const instructor = escapeHtml(c.instructor
+        ? `${c.instructor.firstName} ${c.instructor.lastName}`.trim()
+        : '—');
+
+      const name = escapeHtml(c.classType?.name || 'Class');
+      const zone = c.clubZone?.name || c.clubZone?.shortName || null;
+      const classMeta = CLASS_MASTER[c.classType?.name || ''];
+      const category  = classMeta?.category || null;
+      const categoryColor = category ? (CATEGORY_COLORS[category] || '#6E6E7E') : null;
+      const rowClass = isNow          ? 'now'
+                     : isStartingSoon ? 'starting-soon'
+                     : isFuture       ? 'tomorrow'
+                     : '';
+
+      const endTimeText = `– ${fmt(c.endDate)}`;
+
+      const minsToStart = Math.ceil(msTillStart / 60000);
+      const timeCell = isNow && isEndingSoon
+        ? `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="ending-soon-badge"><span class="ending-soon-dot"></span>Ending Soon</div>`
+        : isNow
+        ? `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="now-badge"><span class="now-badge-dot"></span>In Progress</div>`
+        : isStartingSoon
+        ? `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="starting-soon-badge"><span class="starting-soon-dot"></span>Starts in ${minsToStart}&nbsp;min</div>`
+        : `<div class="time-start">${fmt(c.startDate)}</div>
+           <div class="time-end">${endTimeText}</div>`;
+
+      const pct    = limit > 0 ? Math.min(100, (taken / limit) * 100) : 0;
+      const barClr = left === 0              ? '#C97070'
+                   : left <= LOW_SPOTS_THRESHOLD ? '#C9A870'
+                   : '#7BBF90';
+      const bar = limit > 0
+        ? `<div class="spots-bar"><div class="spots-bar-fill" style="height:${pct}%;background:${barClr}"></div></div>`
+        : '';
+
+      const waitlist = c.waitingListCount ?? c.waitListCount
+                     ?? c.waitingCount    ?? c.attendeesOnWaitingList ?? 0;
+
+      let spotsText;
+      if (limit === 0) {
+        spotsText = `<div class="spots-open-text">Open</div>`;
+      } else if (left === 0) {
+        const waitHtml = waitlist > 0
+          ? `<div class="spots-waiting"><span class="spots-waiting-dot"></span>Waitlist · ${waitlist}</div>` : '';
+        spotsText = `<div><div class="spots-full-badge">Full</div>${waitHtml}</div>`;
+      } else {
+        const cls = left <= LOW_SPOTS_THRESHOLD ? 'low' : 'open';
+        const urgentClass = left <= 2 ? ' urgent' : '';
+        spotsText = `<div><div class="spots-num ${cls}${urgentClass}">${left}</div><div class="spots-lbl">spots</div></div>`;
+      }
+      const spotsHtml = bar + spotsText;
+
+      const elapsedPct = isNow
+        ? Math.min(100, Math.round(((now - start) / (end - start)) * 100))
+        : 0;
+      const progressBar = isNow
+        ? `<div class="class-row-progress" style="width:${elapsedPct}%"></div>`
+        : '';
+
+      return `
+        <div class="class-row ${rowClass}" style="${animate ? `animation-delay:${i * 0.04}s` : 'animation:none'}">
+          <div class="class-time">${timeCell}</div>
+          <div class="class-info">
+            <div>
+              <div class="class-name">${name}</div>
+              ${(category || zone) ? `<div class="class-meta">
+                ${category ? `<span class="class-category-badge" style="background:${categoryColor}22;border:1px solid ${categoryColor}55;color:${categoryColor}">${escapeHtml(category)}</span>` : ''}
+                ${zone ? `<span class="class-zone"><span>${escapeHtml(zone)}</span></span>` : ''}
+              </div>` : ''}
+            </div>
+          </div>
+          <div class="class-instructor">${instructor}</div>
+          <div class="class-spots">${spotsHtml}</div>
+          ${progressBar}
+        </div>`;
+    }
+
+    // Show cached data immediately if available (eliminates loading spinner on reload)
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        cachedClasses = JSON.parse(raw);
+        renderClasses(new Date());
+        showApp();
+      }
+    } catch (_) {}
+
+    loadClasses();
+    setInterval(loadClasses, REFRESH_MINS * 60 * 1000);
+    setInterval(tick, TICK_SECS * 1000);
+  </script>
+
+</body>
+</html>
