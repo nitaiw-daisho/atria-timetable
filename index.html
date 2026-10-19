@@ -667,7 +667,7 @@ function rowHTML(c, now) {
   const m = meta(c), st = state(c, now), sp = spots(c);
   const tag = st === 'now' ? '<span class="tag now">In progress</span>' : st === 'soon' ? `<span class="tag soon">In ${minsTo(c, now)} min</span>` : '';
   const spHTML = sp.kind === 'open' ? `<div class="sp"></div>`
-    : sp.kind === 'full' ? `<div class="sp state"><div class="big">Full</div><div class="lbl">No spots</div></div>`
+    : sp.kind === 'full' ? `<div class="sp state"><div class="big">FULL</div><div class="lbl">Waitlist</div></div>`
     : `<div class="sp ${sp.kind}"><div class="big">${sp.left}</div><div class="lbl">left</div></div>`;
   let prog = '';
   if (st === 'now') { const s = new Date(c.startDate), e = new Date(c.endDate); prog = `<div class="prog" style="width:${Math.min(100, Math.round((now - s) / (e - s) * 100))}%"></div>`; }
