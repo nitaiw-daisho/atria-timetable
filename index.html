@@ -734,19 +734,20 @@ function fit(root) {
   });
 }
 
-/* Portrait: share the height left above the footer among the rows, as taller rows with bigger type (never more rows) */
+/* Share the height left above the footer among the rows, as taller rows with bigger type (never more rows).
+   Portrait: all rows. Landscape: Today's column only, when it has fewer rows than fit (e.g. three left today, where
+   a fourth row would need its own Tomorrow heading). At most +44 px, which ends three rows level with the side column. */
 function grow(port) {
   const st = $('stage').style;
   ['--row-h', '--fs-name', '--fs-time', '--fs-spots'].forEach(v => st.removeProperty(v));
-  if (!port) return;
-  const rowEls = $('screen').querySelectorAll('.body .row, .body .msg');
+  const rowEls = $('screen').querySelectorAll(port ? '.body .row, .body .msg' : '.col-main .row');
   if (!rowEls.length) return;
   const k = 1 / (parseFloat(getComputedStyle($('stage')).transform.split(',')[3]) || 1);   /* screen px → stage px */
-  const free = ($('screen').querySelector('.ftr').getBoundingClientRect().top - rowEls[rowEls.length - 1].getBoundingClientRect().bottom) * k - 32;
-  const add = Math.max(0, Math.min(24, Math.floor(free / rowEls.length)));
+  const free = ($('screen').querySelector('.ftr').getBoundingClientRect().top - rowEls[rowEls.length - 1].getBoundingClientRect().bottom) * k - (port ? 32 : 40);
+  const add = Math.max(0, Math.min(port ? 24 : 44, Math.floor(free / rowEls.length)));
   if (!add) return;
-  const r = (144 + add) / 144;
-  st.setProperty('--row-h', `${144 + add}px`);
+  const base = port ? 144 : 132, r = (base + add) / base;
+  st.setProperty('--row-h', `${base + add}px`);
   st.setProperty('--fs-name', `${Math.round(38 * r)}px`);
   st.setProperty('--fs-time', `${Math.round(36 * r)}px`);
   st.setProperty('--fs-spots', `${Math.round(40 * r)}px`);
