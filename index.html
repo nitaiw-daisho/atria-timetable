@@ -346,12 +346,13 @@ function meta(c) {
   const name = (c.classType && c.classType.name) || 'Class';
   const cat = category(name);
   const zone = (c.clubZone && (c.clubZone.name || c.clubZone.shortName)) || '';
-  const instr = c.instructor ? `${c.instructor.firstName || ''} ${c.instructor.lastName || ''}`.trim() : '';
-  /* short form used only when space runs out: "Alexandria M." */
-  let short = instr;
-  if (c.instructor && c.instructor.lastName) short = `${c.instructor.firstName || ''} ${c.instructor.lastName[0]}.`.trim();
-  else { const w = instr.split(/\s+/); if (w.length > 1) short = `${w[0]} ${w[1][0]}.`; }
-  return { name, cat, col: CAT_COL[cat] || '#8A8A9A', zone, instr, short };
+  /* instructors always show as first name + last initial: "Alexandria M." */
+  const full = c.instructor ? `${c.instructor.firstName || ''} ${c.instructor.lastName || ''}`.trim() : '';
+  let instr = full;
+  const last = c.instructor ? String(c.instructor.lastName || '').trim() : '';
+  if (last) instr = `${c.instructor.firstName || ''} ${last[0]}.`.trim();
+  else { const w = full.split(/\s+/); if (w.length > 1) instr = `${w[0]} ${w[1][0]}.`; }
+  return { name, cat, col: CAT_COL[cat] || '#8A8A9A', zone, instr };
 }
 function state(c, now) {
   const s = new Date(c.startDate), e = new Date(c.endDate);
@@ -638,9 +639,13 @@ function plan(list, now, orient) {
   }
   const hidden = dayAll.length - mainShow.length - sideShow.length;
   const oneDay = !port && noToday && mainShow.length > 0;
-  /* A full next class points to the next one that has spaces */
-  const alt = next && spots(next).kind === 'full'
-    ? upcoming.find(c => new Date(c.startDate) > new Date(next.startDate) && spots(c).kind !== 'full') || null : null;
+  /* A full next class points to the next similar one that has spaces: the same class first, else the same category
+     (another Reformer class for a full Reformer). Nothing similar left: the line just says Full. */
+  let alt = null;
+  if (next && spots(next).kind === 'full') {
+    const nm = meta(next), later = upcoming.filter(c => new Date(c.startDate) > new Date(next.startDate) && spots(c).kind !== 'full');
+    alt = later.find(c => meta(c).name === nm.name) || (nm.cat && later.find(c => meta(c).cat === nm.cat)) || null;
+  }
   /* Overnight (9 pm–5 am, nothing on for the next 90 min): show only the next class, dimmed */
   const h = hourBne(now);
   const night = (h >= 21 || h < 5) && !upcoming.some(c => new Date(c.startDate) <= now) && (!next || new Date(next.startDate) - now > 90 * 60000);
@@ -669,7 +674,7 @@ function rowHTML(c, now) {
   return `<div class="row ${st}" data-k="${esc(c.startDate + m.name)}">
     <div><div class="t1">${fmtHTML(c.startDate)}</div><div class="t2">${dur(c)}</div></div>
     <div style="min-width:0"><div class="n1"><span class="name" data-fit="28">${esc(m.name)}</span>${tag}</div>
-      <div class="n2" data-fit="24">${dot(m.col)}${details(m, [m.zone && zoneHTML(m), m.instr && `<span class="in" data-short="${esc(m.short)}">${esc(m.instr)}</span>`])}</div></div>
+      <div class="n2" data-fit="24">${dot(m.col)}${details(m, [m.zone && zoneHTML(m), m.instr && `<span class="in">${esc(m.instr)}</span>`])}</div></div>
     ${spHTML}${prog}</div>`;
 }
 
@@ -680,7 +685,7 @@ function trowHTML(c) {   /* landscape Tomorrow, narrow column */
   return `<div class="trow" data-k="${esc(c.startDate + m.name)}">
     <div class="tr1"><span class="name" data-fit="24">${esc(m.name)}</span><span class="sp${sp.kind === 'low' || sp.kind === 'full' ? ' ' + sp.kind : ''}">${right}</span></div>
     <div class="tr2" data-fit="24">${details(m, [`<span>${fmtHTML(c.startDate)}</span>`, `<span class="tdur">${dur(c)}</span>`])}</div>
-    <div class="tr3" data-fit="24">${dot(m.col)}${details(m, [m.zone && zoneHTML(m), m.instr && `<span class="in" data-short="${esc(m.short)}">${esc(m.instr)}</span>`])}</div>
+    <div class="tr3" data-fit="24">${dot(m.col)}${details(m, [m.zone && zoneHTML(m), m.instr && `<span class="in">${esc(m.instr)}</span>`])}</div>
   </div>`;
 }
 
@@ -701,7 +706,7 @@ function heroHTML(next, now, port, alt) {
   const start = /^(In |Now)/.test(cd) && `<span style="font-weight:500">${fmtHTML(next.startDate)}</span>`;
   const time = `<span style="font-weight:500">${dur(next)}</span>`;
   const zone = `<span style="display:flex;align-items:center;gap:12px">${dot(m.col)}${m.zone ? zoneHTML(m) : ''}</span>`;
-  const instr = m.instr && `<span class="in" data-short="${esc(m.short)}">${esc(m.instr)}</span>`;
+  const instr = m.instr && `<span class="in">${esc(m.instr)}</span>`;
   /* A full class still leads, but the line points to the next class that has spaces */
   const altWhen = alt && (midnight(new Date(alt.startDate)).getTime() === midnight(new Date(next.startDate)).getTime() ? '' : fmtDay(new Date(alt.startDate)) + ' ');
   const status = sp.kind === 'full' && alt
@@ -724,10 +729,8 @@ function fit(root) {
     const clipped = x => x.scrollWidth > x.clientWidth + 1;
     const over = () => clipped(el) || [].some.call(el.querySelectorAll('.in'), clipped);
     while (over() && fs > min) { fs -= 2; el.style.fontSize = fs + 'px'; }
-    /* still too long at the minimum size: 1) drop the room's last word ("… Zone"), 2) shorten the instructor to "First L.",
-       3) ellipsis as a last resort */
+    /* still too long at the minimum size: drop the room's last word ("… Zone"), then ellipsis as a last resort */
     if (over()) el.querySelectorAll('.zn[data-short]').forEach(x => { x.textContent = x.dataset.short; });
-    if (over()) el.querySelectorAll('.in[data-short]').forEach(x => { x.textContent = x.dataset.short; });
   });
 }
 
