@@ -47,15 +47,21 @@ body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: ant
 
 /* Fixed-size stage, scaled to fit the screen by JS */
 #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--bg); }
-#stage.land { width: 1920px; height: 1080px;
+#stage.land { width: 1920px; height: 1080px; }
+#stage.port { width: 1080px; height: 1920px;
+  --row-h: 144px; --c-time: 180px; --c-spots: 140px; --fs-hero: 112px; --fs-count: 88px; }
+/* Colour glows on their own layer, drifting very slowly (under 2 % over several minutes) so no glow edge sits on the
+   same pixels. Moved in small steps on the 5 s tick (driftGlow), not by a running animation, so the TV redraws once
+   every 5 s rather than 60 times a second. Scaled up a little so the shift never shows an edge. */
+.glow { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; transform: scale(1.04); }
+.land .glow {
   background: radial-gradient(circle at 10% 108%, rgba(176,106,60,0.45), transparent 50%),
               radial-gradient(circle at 40% -18%, rgba(112,72,168,0.60), transparent 58%),
-              radial-gradient(circle at 102% 85%, rgba(40,62,160,0.55), transparent 50%), var(--bg); }
-#stage.port { width: 1080px; height: 1920px;
-  --row-h: 144px; --c-time: 180px; --c-spots: 140px; --fs-hero: 112px; --fs-count: 88px;
+              radial-gradient(circle at 102% 85%, rgba(40,62,160,0.55), transparent 50%); }
+.port .glow {
   background: radial-gradient(circle at 12% 100%, rgba(176,106,60,0.50), transparent 48%),
               radial-gradient(circle at 50% -6%, rgba(112,72,168,0.58), transparent 52%),
-              radial-gradient(circle at 100% 72%, rgba(40,62,160,0.56), transparent 48%), var(--bg); }
+              radial-gradient(circle at 100% 72%, rgba(40,62,160,0.56), transparent 48%); }
 
 /* Darkening layer so lists always sit on a calm ground */
 .shade { position: absolute; top: 0; right: 0; bottom: 0; left: 0; pointer-events: none; }
@@ -109,6 +115,9 @@ body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: ant
 .h-count { font-size: var(--fs-count); font-weight: 300; color: var(--time); white-space: nowrap; flex-shrink: 0; }
 .land .h-count { line-height: 96px; }
 .port .h-count { line-height: 96px; height: 96px; }
+/* Last 5 minutes before the next class: one soft pulse each time the countdown changes */
+.h-count.pulse { animation: pulse-count 2.4s ease-in-out both; }
+@keyframes pulse-count { 0%, 100% { opacity: 1; } 50% { opacity: 0.65; } }
 .h-detail { font-size: var(--fs-detail); line-height: 32px; height: 32px; color: var(--text-2); display: flex; align-items: center; gap: 14px; }
 .land .h-detail { margin-top: 12px; }
 .port .h-detail.d1 { margin-top: 20px; }
@@ -120,9 +129,21 @@ body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: ant
 /* Smaller AM/PM so times read faster */
 .ap { font-size: 0.62em; font-weight: 500; margin-left: 0.18em; letter-spacing: 0.04em; }
 
-/* Rows that newly appear fade in instead of jumping */
-.enter { animation: enter 0.6s ease-out both; }
-@keyframes enter { from { opacity: 0; transform: translateY(10px); } }
+/* Motion: everything leaves upwards and arrives from below, in one order (out, then move, then in), with two curves */
+:root { --ease-out: cubic-bezier(.4,0,1,1); --ease-in: cubic-bezier(.2,.7,.2,1); }
+/* Rows that newly appear fade in after the others have moved */
+.enter { animation: enter 0.6s 0.5s var(--ease-in) both; }
+@keyframes enter { from { opacity: 0; transform: translateY(12px); } }
+/* Hand-over when the next class changes: the old hero lifts away, then the new one rises in */
+.hero { position: relative; }
+.h-ghost { position: absolute; left: 0; top: 0; right: 0; pointer-events: none; animation: h-out 0.4s var(--ease-out) both; }
+@keyframes h-out { to { opacity: 0; transform: translateY(-16px); } }
+.hero.h-in > :not(.h-ghost) { animation: h-in 0.7s 0.4s var(--ease-in) both; }
+@keyframes h-in { from { opacity: 0; transform: translateY(16px); } }
+/* A class that has just started: its ring eases from orange (soon) to white (in progress) */
+.row.now.went-live { animation: went-live 1.2s ease-in-out both; }
+.row.now.went-live.enter { animation: enter 0.6s 0.5s var(--ease-in) both, went-live 1.6s 0.5s ease-in-out both; }
+@keyframes went-live { from { box-shadow: inset 0 0 0 3px var(--time); } }
 
 /* Overnight: only the next class and the clock, dimmed (less light at night, less burn-in) */
 #stage.night .screen { opacity: 0.55; }
@@ -172,7 +193,11 @@ body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: ant
 .sp.low .lbl { color: var(--time); font-weight: 700; }
 .sp.state .big { font-size: 32px; font-weight: 500; color: var(--muted); letter-spacing: 0.04em; }
 .sp.state .lbl { opacity: 0.8; }
-.prog { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--text); opacity: 0.7; }
+/* Rows that leave fade up and out where they were, while the others glide to their new places.
+   #screen > raises it above .row, whose position: relative would otherwise put the ghost back in the page flow. */
+#screen > .ghost { position: absolute; margin: 0; pointer-events: none; animation: leave 0.4s var(--ease-out) both; }
+@keyframes leave { to { opacity: 0; transform: translateY(-12px); } }
+.prog { position: absolute; left: 0; bottom: 0; width: 100%; height: 6px; background: var(--text); opacity: 0.7; transform-origin: 0 50%; }
 
 /* Compact row for Tomorrow in landscape */
 .trow { height: var(--trow-h); box-sizing: border-box; padding: 0 32px; display: flex; flex-direction: column; justify-content: center;
@@ -206,6 +231,17 @@ body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: ant
 .closed { display: none; flex: 1; min-height: 0; position: relative; }
 .is-closed .closed { display: block; }
 .is-closed .body { display: none; }
+/* Opening and closing: the page that takes over fades in; the dimming of the screen eases too */
+.swap-in { animation: swap-in 1.2s 0.5s ease-out both; }
+@keyframes swap-in { from { opacity: 0; } }
+.swap-out { position: absolute; margin: 0; pointer-events: none; animation: swap-out 0.6s ease-in both; }
+@keyframes swap-out { to { opacity: 0; } }
+/* ?motion=0: no animation at all (the screen steps once a minute as before); for a screen that struggles */
+#stage.still *, #stage.still *::before { animation: none !important; transition: none !important; }
+/* ?debug=1: what the screen really draws at, to check on the TV itself */
+#debug { position: fixed; left: 8px; top: 8px; z-index: 9; padding: 6px 10px; background: rgba(0,0,0,0.75); color: #9f9;
+  font: 14px/1.4 monospace; white-space: pre; pointer-events: none; }
+.screen { transition: opacity 1.6s ease-out; }
 /* The block drifts slowly inside the page (moved by JS) so nothing sits on the same pixels for hours */
 .c-wrap { position: absolute; left: 0; top: 0; max-width: 100%; transition: transform 6s ease-in-out; }
 .land .c-wrap { display: grid; grid-template-columns: auto auto; grid-template-areas: "main side" "book side"; column-gap: 120px; align-items: center; }
@@ -244,6 +280,7 @@ body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: ant
 </head>
 <body>
 <div id="stage">
+  <div class="glow"></div>
   <div class="shade"></div>
   <div class="screen" id="screen">
     <header class="hdr">
@@ -299,6 +336,14 @@ const RELOAD_AT_H  = 3;              /* nightly self-reload (Brisbane hour) to p
 const ROWS = { land: { today: 4, tomorrow: 3 }, port: { today: 6, tomorrow: 1 } };   /* portrait: Today first; the next day keeps one row */
 /* URL options: ?demo=1 sample data · ?portrait=1 / ?landscape=1 force orientation */
 const Q = new URLSearchParams(location.search);
+/* Demo only: ?demo=1&speed=20 runs the clock 20× faster, to watch classes start and finish;
+   &at=21:50 starts the clock at that Brisbane time today (e.g. just before closing or opening) */
+const AT = (([h, m]) => Q.get('demo') === '1' && h < 24 && m < 60 ? [h, m] : null)(/^\d{1,2}:\d\d$/.test(Q.get('at') || '') ? Q.get('at').split(':').map(Number) : [99, 99]);
+const STILL = Q.get('motion') === '0';
+const SPEED = Q.get('demo') === '1' && +Q.get('speed') > 1 ? +Q.get('speed') : 1;
+if (SPEED > 1 || AT) { const R = Date, t0 = R.now(), day = Math.floor((t0 + 36e6) / 864e5) * 864e5 - 36e6;
+  const start = AT ? day + (AT[0] * 60 + AT[1]) * 60000 : t0, now = () => start + (R.now() - t0) * SPEED;
+  Date = class extends R { constructor(...a) { a.length ? super(...a) : super(now()); } static now() { return now(); } }; }
 
 /* Category dot colours: spread round the colour wheel so they tell apart at a distance; none is orange (orange = time) */
 const CAT_COL = { Reformer:'#3CC6B8', Pilates:'#5FA8F5', Yoga:'#A68BEB', Barre:'#E58AC9', Boxing:'#F06A6A', Functional:'#E8C547', Stretch:'#8CCB6A', Event:'#9A9AA8' };
@@ -489,10 +534,13 @@ function placeClosed(now) {
   const box = $('closed'), wrap = $('c-wrap');
   const tri = p => { const x = (now.getTime() / 60000 / p) % 1; return x < 0.5 ? x * 2 : 2 - x * 2; };
   const sx = Math.max(0, Math.min(160, box.offsetWidth - wrap.offsetWidth)), sy = Math.max(0, box.offsetHeight - wrap.offsetHeight);
-  const first = !wrap.style.transform;   /* first placement: no slide in from the corner */
+  /* first placement: no slide in from the corner. Nor when the block has grown past its old offset (the font arriving):
+     sliding back would leave its right edge ("…5:30 AM") off the screen for the length of the slide. */
+  const first = !wrap.style.transform || placeClosed.x > sx || placeClosed.y > sy;
   if (first) wrap.style.transition = 'none';
   const [y0, yr] = orient === 'port' ? [0.05, 0.5] : [0.15, 0.7];
-  wrap.style.transform = `translate(${Math.round(sx * tri(53))}px, ${Math.round(sy * (y0 + yr * tri(37)))}px)`;
+  placeClosed.x = Math.round(sx * tri(53)); placeClosed.y = Math.round(sy * (y0 + yr * tri(37)));
+  wrap.style.transform = `translate(${placeClosed.x}px, ${placeClosed.y}px)`;
   if (first) { void wrap.offsetWidth; wrap.style.transition = ''; }
 }
 
@@ -553,7 +601,10 @@ async function load() {
   load.t = setTimeout(load, RETRY_SECS * 1000);
   const now = new Date();
   if (Q.get('demo') === '1') {
-    classes = demoClasses(now); hours = demoHours(now); mode = 'demo'; savedAt = now; dirty = true; safeRender();
+    /* sped up: keep one day's sample, and make a new one when the demo clock reaches the next day */
+    if ((SPEED === 1 && !AT) || !classes.length || load.demoDay !== midnight(now).getTime()) {
+      classes = demoClasses(now); hours = demoHours(now); load.demoDay = midnight(now).getTime(); }
+    mode = 'demo'; savedAt = now; dirty = true; safeRender();
     clearTimeout(load.t); load.t = setTimeout(load, REFRESH_MINS * 60000);
     return;
   }
@@ -600,6 +651,8 @@ function demoClasses(now) {
     mk('Latin Pulse', m(103), 45, 'Main Studio', 20, 8), mk('Mez Melt', m(118), 45, 'Mezzanine', 18, 4),
     mk('Hot Yoga Flow', tom + 7 * 3600000, 50, 'Main Studio', 20, 2), mk('IGNITE', tom + 8 * 3600000, 45, 'Main Studio', 18, 8),
     mk('Athletic Reformer', tom + 9 * 3600000, 50, 'Reformer Studio', 10, 8), mk('MELT (Free)', tom + 10 * 3600000, 45, 'Main Studio', 0, 0) ]
+    .filter(c => { if (!AT) return true; const mins = d => Math.round((Date.parse(d) + OFF) / 60000) % 1440;
+      return mins(c.startDate) >= 330 && mins(c.endDate) <= 1320 && mins(c.endDate) > mins(c.startDate); })
     .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 }
 
@@ -670,7 +723,9 @@ function rowHTML(c, now) {
     : sp.kind === 'full' ? `<div class="sp state"><div class="big">FULL</div><div class="lbl">Waitlist</div></div>`
     : `<div class="sp ${sp.kind}"><div class="big">${sp.left}</div><div class="lbl">left</div></div>`;
   let prog = '';
-  if (st === 'now') { const s = new Date(c.startDate), e = new Date(c.endDate); prog = `<div class="prog" style="width:${Math.min(100, Math.round((now - s) / (e - s) * 100))}%"></div>`; }
+  /* Drawn at the elapsed share, then eased to full over the time left (see fillBars), so it fills smoothly, not once a minute */
+  if (st === 'now') { const s = new Date(c.startDate), e = new Date(c.endDate);
+    prog = `<div class="prog" data-left="${Math.round((e - now) / SPEED)}" style="transform:scaleX(${Math.min(1, (now - s) / (e - s)).toFixed(4)})"></div>`; }
   return `<div class="row ${st}" data-k="${esc(c.startDate + m.name)}">
     <div><div class="t1">${fmtHTML(c.startDate)}</div><div class="t2">${dur(c)}</div></div>
     <div style="min-width:0"><div class="n1"><span class="name" data-fit="28">${esc(m.name)}</span>${tag}</div>
@@ -713,7 +768,7 @@ function heroHTML(next, now, port, alt) {
     ? `<span style="font-weight:600">Full – next with spaces: ${esc(meta(alt).name)}, ${altWhen}${fmtHTML(alt.startDate)}</span>`
     : `<span style="font-weight:600${sp.kind === 'low' ? ';color:var(--time)' : ''}">${esc(spotsText(sp))}</span>`;
   const head = `<div class="h-label"><span class="h-rule"></span>Next up</div>
-    <div class="h-main"><span class="h-name" data-fit="${port ? 64 : 52}">${esc(m.name)}</span><span class="h-count${cdLen > 10 ? ' long' : ''}">${cd}</span></div>`;
+    <div class="h-main"><span class="h-name" data-fit="${port ? 64 : 52}">${esc(m.name)}</span><span class="h-count${cdLen > 10 ? ' long' : ''}${new Date(next.startDate) - now <= 5 * 60000 ? ' pulse' : ''}">${cd}</span></div>`;
   if (port) return head +
     `<div class="h-detail d1" data-fit="24">${details(m, [start, time, zone])}</div>
      <div class="h-detail d2" data-fit="24">${details(m, [instr, status])}</div>`;
@@ -763,6 +818,35 @@ function statusText(now) {
   return 'Loading…';
 }
 
+/* Where each class row sits, in stage px from the screen's corner, keyed by data-k */
+function rowRects(screen) {
+  const o = screen.getBoundingClientRect(), k = $('stage').getBoundingClientRect().width / $('stage').offsetWidth, m = new Map();
+  screen.querySelectorAll('.body [data-k]').forEach(el => { const r = el.getBoundingClientRect();
+    m.set(el.dataset.k, { el, x: (r.left - o.left) / k, y: (r.top - o.top) / k, w: r.width / k, h: r.height / k }); });
+  return m;
+}
+/* Rows still on screen glide from their old place to the new one; rows that left fade out where they were */
+function moveRows(screen, was) {
+  const is = rowRects(screen), moved = [];
+  is.forEach((r, key) => { const o = was.get(key);
+    if (!o || !o.w || !r.w || Math.abs(o.x - r.x) + Math.abs(o.y - r.y) < 1) return;
+    r.el.style.transition = 'none'; r.el.style.transform = `translate(${o.x - r.x}px, ${o.y - r.y}px)`; moved.push(r.el); });
+  if (moved.length) { void screen.offsetWidth;
+    moved.forEach(el => { el.style.transition = 'transform 0.9s 0.15s var(--ease-in)'; el.style.transform = '';
+      setTimeout(() => { el.style.transition = ''; }, 1100); }); }
+  was.forEach((o, key) => { if (is.has(key) || !o.w) return;
+    const g = o.el; g.classList.remove('enter'); g.classList.add('ghost');
+    Object.assign(g.style, { left: o.x + 'px', top: o.y + 'px', width: o.w + 'px', height: o.h + 'px' });
+    screen.appendChild(g); setTimeout(() => g.remove(), 450); });
+}
+/* Running classes' bars: start from the share already done and fill to the end time */
+function fillBars(root) {
+  const bars = root.querySelectorAll('.prog[data-left]');
+  if (!bars.length) return;
+  void root.offsetWidth;
+  bars.forEach(el => { el.style.transition = `transform ${el.dataset.left}ms linear`; el.style.transform = 'scaleX(1)'; });
+}
+
 const SHIFT = [[0, 0], [4, 2], [8, 4], [4, 6], [0, 8], [-4, 6], [-8, 4], [-4, 2]];   /* stage px */
 function layout() {
   const stage = $('stage');
@@ -775,6 +859,15 @@ function layout() {
   /* Screen care: nudge the content (not the background) a few pixels every hour, so nothing sits on the same pixels for days */
   const [dx, dy] = SHIFT[Math.floor(Date.now() / 3600000) % SHIFT.length];
   $('screen').style.transform = `translate(${dx}px, ${dy - 4}px)`;   /* -4: centre the 0–8 px vertical range */
+  driftGlow();
+}
+/* Glow position from the clock: two slow waves (7 and 11 min), at most 1.8 % sideways and 1.5 % up or down, inside the
+   4 % the layer is scaled up by. Still at night, while closed overnight, and with ?motion=0. */
+function driftGlow() {
+  const st = $('stage');
+  if (STILL || st.classList.contains('night') || st.classList.contains('closed-night')) return;
+  const t = Date.now() / 60000, x = 1.8 * Math.sin(t / 7 * 2 * Math.PI), y = 1.5 * Math.sin(t / 11 * 2 * Math.PI);
+  st.querySelector('.glow').style.transform = `translate(${x.toFixed(2)}%, ${y.toFixed(2)}%) scale(1.04)`;
 }
 
 let lastMinute = -1;
@@ -814,9 +907,29 @@ function render() {
   /* A class running outside the listed hours (a late event) keeps the schedule up */
   const running = classes.some(c => new Date(c.startDate) <= now && now < new Date(c.endDate));
   const closed = !blank && !!(os && !os.open) && !running;
+  /* Opening and closing: a copy of the page that is going fades out where it was, then the new page fades in */
+  if (!STILL && render.shut !== undefined && render.shut !== closed && !blank) {
+    const el = closed ? $('closed') : screen.querySelector('.body'), old = closed ? screen.querySelector('.body') : $('closed');
+    const o = screen.getBoundingClientRect(), r = old.getBoundingClientRect(), k = $('stage').getBoundingClientRect().width / $('stage').offsetWidth;
+    if (r.width) {
+      /* the copy keeps the page's layout but is no longer .body / #closed, so nothing mistakes it for the real page */
+      const cs = getComputedStyle(old), g = old.cloneNode(true);
+      g.querySelectorAll('[id],[data-k]').forEach(x => { x.removeAttribute('id'); x.removeAttribute('data-k'); }); g.removeAttribute('id');
+      g.className = 'swap-out';
+      Object.assign(g.style, { display: cs.display, gridTemplateColumns: cs.gridTemplateColumns, columnGap: cs.columnGap, flexDirection: cs.flexDirection });
+      Object.assign(g.style, { left: (r.left - o.left) / k + 'px', top: (r.top - o.top) / k + 'px', width: r.width / k + 'px', height: r.height / k + 'px' });
+      screen.appendChild(g); setTimeout(() => g.remove(), 700);
+    }
+    [$('closed'), screen.querySelector('.body')].forEach(x => x.classList.remove('swap-in'));
+    void el.offsetWidth; el.classList.add('swap-in');
+    clearTimeout(render.swapT); render.swapT = setTimeout(() => el.classList.remove('swap-in'), 2000);
+  }
+  if (!blank) render.shut = closed;
   screen.classList.toggle('is-closed', closed);
   $('stage').classList.toggle('shut', closed);
   $('stage').classList.toggle('closed-night', closed && (hourBne(now) >= 21 || hourBne(now) < 5));
+  /* After the Closed or Unavailable page, draw the schedule fresh: nothing to animate from */
+  if (blank || closed) render.keys = null;
   if (blank) return;
   if (closed) {
     $('stage').classList.remove('night');
@@ -827,7 +940,27 @@ function render() {
   }
 
   const port = orient === 'port', p = plan(classes, now, orient);
-  $('hero').innerHTML = heroHTML(p.next, now, port, p.alt);
+  /* Animate changes only between two schedule draws in the same orientation (not the first draw or a re-layout) */
+  /* After the night view, the rows come back with their fade, as if new */
+  if (render.night && !p.night && render.keys) render.keys = new Set();
+  render.night = p.night;
+  const anim = !STILL && render.keys && render.orient === orient;
+  /* Rows are measured for gliding only if the last draw has settled (a second draw within 1.5 s would catch them mid-move) */
+  const t = performance.now(), settled = t - (render.drawn || 0) > 1500 / SPEED;
+  render.drawn = t;
+  const was = anim && settled ? rowRects(screen) : null;
+  const hero = $('hero'), heroKey = p.next ? p.next.startDate + meta(p.next).name : '';
+  let heroOld = null;
+  if (anim && heroKey !== render.heroKey) {
+    const c = document.createElement('div');
+    [].forEach.call(hero.children, x => { if (!x.classList.contains('h-ghost')) c.appendChild(x.cloneNode(true)); });
+    c.querySelectorAll('.pulse').forEach(x => x.classList.remove('pulse'));
+    heroOld = c.innerHTML;
+  } else if (hero.classList.contains('h-in')) { hero.classList.remove('h-in'); clearTimeout(render.heroT); }   /* a redraw mid hand-over: don't play it again */
+  const prevHero = render.heroKey;
+  render.heroKey = heroKey; render.orient = orient;
+  const states = new Map(); p.todayShow.concat(p.mainShow).forEach(c => states.set(c.startDate + meta(c).name, state(c, now)));
+  hero.innerHTML = heroHTML(p.next, now, port, p.alt);
   $('stage').classList.toggle('night', p.night);
   $('today-title').textContent = 'Today';   /* the date is already in the header */
   $('today-more').textContent = p.todayMore;
@@ -844,9 +977,21 @@ function render() {
     : msgHTML('No classes listed yet', 'Check back later');
   grow(port);
   fit(screen);
+  fillBars(screen);
+  if (heroOld !== null) {
+    const g = document.createElement('div'); g.className = 'h-ghost'; g.innerHTML = heroOld;
+    hero.classList.remove('h-in'); void hero.offsetWidth; hero.classList.add('h-in'); hero.appendChild(g);
+    setTimeout(() => g.remove(), 450);
+    clearTimeout(render.heroT); render.heroT = setTimeout(() => hero.classList.remove('h-in'), 1200);
+  }
+  if (was) moveRows(screen, was);
+  /* A class that has just started (from Next up, or a "soon" row): its ring eases from orange to white */
+  if (anim && render.states) screen.querySelectorAll('.body .row.now[data-k]').forEach(el => {
+    if (el.dataset.k === prevHero || render.states.get(el.dataset.k) === 'soon') el.classList.add('went-live'); });
+  render.states = states;
   /* Fade in rows that were not on screen before (none on the first draw) */
   const keys = new Set();
-  screen.querySelectorAll('[data-k]').forEach(el => { keys.add(el.dataset.k); if (render.keys && !render.keys.has(el.dataset.k)) el.classList.add('enter'); });
+  screen.querySelectorAll('.body [data-k]').forEach(el => { keys.add(el.dataset.k); if (render.keys && !render.keys.has(el.dataset.k)) el.classList.add('enter'); });
   render.keys = keys;
 }
 
@@ -877,7 +1022,25 @@ window.addEventListener('pageshow', e => { if (e.persisted) wake(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') wake(); });
 window.addEventListener('resize', () => { dirty = true; safeRender(); });
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { dirty = true; safeRender(); });
-setInterval(safeRender, 5000);
+/* fonts.ready can settle before Montserrat is even requested, so the Closed page can be laid out (and fitted) in the
+   narrower fallback font: refit it once a font has really loaded */
+if (document.fonts) document.fonts.addEventListener('loadingdone', () => { render.closed = ''; dirty = true; safeRender(); });
+/* The Closed block's drift is worked out from its size: if it grows between passes, re-place it now, not at the next minute */
+if (window.ResizeObserver) new ResizeObserver(() => {
+  if ($('screen').classList.contains('is-closed')) placeClosed(new Date());
+}).observe($('c-wrap'));
+setInterval(safeRender, SPEED > 1 ? 1000 : 5000);
+if (STILL) $('stage').classList.add('still');
+/* ?debug=1: window size, pixel ratio, stage scale, browser engine and frames per second, every 2 s */
+if (Q.get('debug') === '1') {
+  const d = document.createElement('div'); d.id = 'debug'; document.body.appendChild(d);
+  let n = 0, t0 = performance.now();
+  const frame = () => { n++; requestAnimationFrame(frame); }; requestAnimationFrame(frame);
+  setInterval(() => { const t = performance.now(), fps = Math.round(n * 1000 / (t - t0)); n = 0; t0 = t;
+    const chrome = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1] || '?';
+    d.textContent = `${innerWidth}×${innerHeight} @${devicePixelRatio}x · stage ×${($('stage').getBoundingClientRect().width / $('stage').offsetWidth).toFixed(3)}\n`
+      + `${fps} fps · Chrome ${chrome} · ${orient}${STILL ? ' · motion off' : ''}`; }, 2000);
+}
 load();
 safeRender();
 </script>
