@@ -292,8 +292,8 @@ body { font-family: var(--font); color: var(--text); -webkit-font-smoothing: ant
     </header>
 
     <div class="unavail">
-      <div class="u-1" id="u-1">Schedule unavailable</div>
-      <div class="u-2" id="u-2">Check the ATRIA app or ask reception for today’s classes.</div>
+      <div class="u-1" id="u-1">Timetable unavailable</div>
+      <div class="u-2" id="u-2">Check the ATRIA app for today’s classes.</div>
     </div>
 
     <div class="closed" id="closed"><div class="c-wrap" id="c-wrap"></div></div>
@@ -405,6 +405,7 @@ function state(c, now) {
   const ms = s - now;
   return ms > 0 && ms <= SOON_MINS * 60000 ? 'soon' : 'later';
 }
+const rowKey = c => c.startDate + meta(c).name + '|' + meta(c).zone;   /* identifies a row across redraws */
 const minsTo = (c, now) => Math.max(1, Math.ceil((new Date(c.startDate) - now) / 60000));
 function spots(c) {
   const limit = c.attendeesLimit || 0, left = Math.max(0, limit - (c.attendeesCount || 0));
@@ -413,13 +414,13 @@ function spots(c) {
   return { kind: left <= LOW_SPOTS ? 'low' : 'left', left };
 }
 function spotsText(sp) {
-  if (sp.kind === 'open') return 'Open, no limit';
-  if (sp.kind === 'full') return 'Full';
+  if (sp.kind === 'open') return 'No booking needed';
+  if (sp.kind === 'full') return 'Full / Waitlist';   /* wording asked for by the gym */
   return `${sp.left} spot${sp.left === 1 ? '' : 's'} left`;
 }
 function countdown(c, now) {
   const s = new Date(c.startDate), m = Math.ceil((s - now) / 60000), today = midnight(now);
-  if (m <= 0) return 'Now';
+  if (m <= 0) return 'Starting now';
   if (m < 60) return `In ${m} min`;
   const day = midnight(s).getTime();
   if (day === today.getTime()) { const h = Math.floor(m / 60), r = m % 60; return r ? `In ${h} h ${r} min` : `In ${h} h`; }
@@ -441,7 +442,8 @@ function cleanHours(h) {
   const slot = x => ({ closed: !!x.closed, allDay: !!x.allDay || (x.open === 0 && x.close === 1440),
     open: okMin(x.open) ? x.open : null, close: okMin(x.close) ? x.close : null });
   const usable = x => x.closed || x.allDay || (x.open !== null && x.close !== null);
-  const week = h.week.filter(x => x && x.day >= 0 && x.day <= 6).map(x => ({ day: x.day, ...slot(x) })).filter(usable);
+  const dayNum = d => typeof d === 'number' ? d : typeof d === 'string' && /^[0-6]$/.test(d) ? +d : -1;   /* 1 or "1" */
+  const week = h.week.filter(x => x && dayNum(x.day) >= 0 && dayNum(x.day) <= 6).map(x => ({ day: dayNum(x.day), ...slot(x) })).filter(usable);
   const except = (Array.isArray(h.except) ? h.except : []).filter(x => x && /^\d{4}-\d\d-\d\d$/.test(x.from) && /^\d{4}-\d\d-\d\d$/.test(x.until))
     .map(x => ({ from: x.from, until: x.until, ...slot(x) })).filter(usable);
   return week.length ? { week, except } : null;
@@ -510,7 +512,7 @@ function weekRows(h, today) {
 function closedHTML(os, now, h, list) {
   const today = midnight(now).getTime();
   const book = `<div class="c-book">Book classes in the ATRIA app</div>`;
-  if (os.nextDay === null) return `<div class="c-main"><div class="c-1">Closed</div><div class="c-2">Ask reception for opening times</div></div>${book}`;
+  if (os.nextDay === null) return `<div class="c-main"><div class="c-1">Closed</div><div class="c-2">Opening times are in the ATRIA app</div></div>${book}`;
   const i = Math.round((os.nextDay - today) / DAY);
   const dayWord = i === 0 ? 'today' : i === 1 ? 'tomorrow' : fmtDay(new Date(os.nextDay + 12 * 3600000));
   const mins = Math.ceil((os.nextAt - now) / 60000);
@@ -550,6 +552,7 @@ let hours = null;            /* opening hours, or null when the feed has none */
 let mode = 'loading';        /* loading | starting (saved copy, first fetch pending) | live | cache | unavail | demo */
 let savedAt = null;           /* when the shown data was fetched */
 let failing = false;
+let emptyRun = 0;            /* empty replies in a row while classes were still coming up (see load) */
 let dirty = true;
 
 /* Keep only usable classes, and only the fields the screen uses (the same rules for the feed and the saved copy) */
@@ -615,10 +618,20 @@ async function load() {
   try {
     const data = await getJSON(`${WORKER_URL}?${params}`);
     if (!data || !Array.isArray(data.value)) throw new Error('Unexpected reply from the feed');   /* never let a bad reply replace good data */
-    classes = clean(data.value, true);
+    const list = clean(data.value, true);
+    /* An empty week while classes were still coming up is more likely a hiccup than the truth: keep what is shown
+       and ask again in a minute. Three empty replies in a row are believed (a holiday shutdown, say). */
+    if (!list.length && classes.some(c => new Date(c.endDate) > now) && ++emptyRun < 3) throw new Error('Empty reply from the feed');
+    emptyRun = 0;
+    /* The worker says how old its answer is (it may be its saved copy while Perfect Gym is down); an older worker doesn't */
+    const age = typeof data.ageSecs === 'number' && data.ageSecs >= 0 ? data.ageSecs * 1000 : 0;
+    const at = new Date(now.getTime() - age);
+    if (!fresh(at)) throw new Error('The feed only has an out-of-date timetable');
+    classes = list;
     hours = cleanHours(data.hours);
-    savedAt = now; mode = 'live'; failing = false;
-    writeCache(classes, hours, now);
+    savedAt = at; failing = age > 2 * 60000;   /* a saved copy: keep asking every minute */
+    mode = age > STALE_MINS * 60000 ? 'cache' : 'live';
+    writeCache(classes, hours, at);
   } catch (e) {
     console.error('Timetable load failed:', e);
     failing = true;
@@ -626,7 +639,9 @@ async function load() {
       const c = readCache();
       classes = c ? c.classes : []; savedAt = c ? c.savedAt : null; hours = c ? c.hours : null;
     }
-    mode = savedAt && fresh(savedAt) ? 'cache' : 'unavail';
+    /* One missed refresh isn't news: live data stays "live" until it is STALE_MINS old (the tick then marks it Offline) */
+    const recent = mode === 'live' && Date.now() - savedAt < STALE_MINS * 60000;
+    mode = recent ? 'live' : savedAt && fresh(savedAt) ? 'cache' : 'unavail';
     if (mode === 'unavail') { classes = []; hours = null; }
   } finally { inFlight = false; }
   dirty = true; safeRender();
@@ -726,7 +741,7 @@ function rowHTML(c, now) {
   /* Drawn at the elapsed share, then eased to full over the time left (see fillBars), so it fills smoothly, not once a minute */
   if (st === 'now') { const s = new Date(c.startDate), e = new Date(c.endDate);
     prog = `<div class="prog" data-left="${Math.round((e - now) / SPEED)}" style="transform:scaleX(${Math.min(1, (now - s) / (e - s)).toFixed(4)})"></div>`; }
-  return `<div class="row ${st}" data-k="${esc(c.startDate + m.name)}">
+  return `<div class="row ${st}" data-k="${esc(rowKey(c))}">
     <div><div class="t1">${fmtHTML(c.startDate)}</div><div class="t2">${dur(c)}</div></div>
     <div style="min-width:0"><div class="n1"><span class="name" data-fit="28">${esc(m.name)}</span>${tag}</div>
       <div class="n2" data-fit="24">${dot(m.col)}${details(m, [m.zone && zoneHTML(m), m.instr && `<span class="in">${esc(m.instr)}</span>`])}</div></div>
@@ -735,9 +750,9 @@ function rowHTML(c, now) {
 
 function trowHTML(c) {   /* landscape Tomorrow, narrow column */
   const m = meta(c), sp = spots(c);
-  const right = sp.kind === 'open' ? '' : sp.kind === 'full' ? '<span class="big">Full</span>'
+  const right = sp.kind === 'open' ? '' : sp.kind === 'full' ? '<span class="big">Full</span><span class="unit">/ Waitlist</span>'
     : `<span class="big">${sp.left}</span><span class="unit">left</span>`;
-  return `<div class="trow" data-k="${esc(c.startDate + m.name)}">
+  return `<div class="trow" data-k="${esc(rowKey(c))}">
     <div class="tr1"><span class="name" data-fit="24">${esc(m.name)}</span><span class="sp${sp.kind === 'low' || sp.kind === 'full' ? ' ' + sp.kind : ''}">${right}</span></div>
     <div class="tr2" data-fit="24">${details(m, [`<span>${fmtHTML(c.startDate)}</span>`, `<span class="tdur">${dur(c)}</span>`])}</div>
     <div class="tr3" data-fit="24">${dot(m.col)}${details(m, [m.zone && zoneHTML(m), m.instr && `<span class="in">${esc(m.instr)}</span>`])}</div>
@@ -746,29 +761,25 @@ function trowHTML(c) {   /* landscape Tomorrow, narrow column */
 
 const msgHTML = (a, b) => `<div class="msg"><div class="msg-1">${esc(a)}</div><div class="msg-2">${esc(b)}</div></div>`;
 
-function emptyMessage(now) {
-  const h = hourBne(now);
-  if (h >= 21) return ['No more classes tonight', 'See you tomorrow'];
-  if (h < 6)   return ['Classes start soon', 'Today’s timetable will appear here'];
-  return ['No more classes today', 'See tomorrow’s timetable'];
-}
+/* No next class means nothing is listed for the whole coming week (the feed covers today + 7 days) */
+const EMPTY = ['No classes scheduled', 'Check the ATRIA app for upcoming classes'];
 
 function heroHTML(next, now, port, alt) {
-  if (!next) { const [a, b] = emptyMessage(now); return `<div class="h-empty">${esc(a)}</div><div class="h-empty-sub">${esc(b)}</div>`; }
+  if (!next) { const [a, b] = EMPTY; return `<div class="h-empty">${esc(a)}</div><div class="h-empty-sub">${esc(b)}</div>`; }
   const m = meta(next), sp = spots(next);
   /* Start time once: in the countdown when it names the day, otherwise here before the length */
   const cd = countdown(next, now), cdLen = cd.replace(/<[^>]*>/g, '').length;
-  const start = /^(In |Now)/.test(cd) && `<span style="font-weight:500">${fmtHTML(next.startDate)}</span>`;
+  const start = /^(In |Starting now)/.test(cd) && `<span style="font-weight:500">${fmtHTML(next.startDate)}</span>`;
   const time = `<span style="font-weight:500">${dur(next)}</span>`;
   const zone = `<span style="display:flex;align-items:center;gap:12px">${dot(m.col)}${m.zone ? zoneHTML(m) : ''}</span>`;
   const instr = m.instr && `<span class="in">${esc(m.instr)}</span>`;
   /* A full class still leads, but the line points to the next class that has spaces */
   const altWhen = alt && (midnight(new Date(alt.startDate)).getTime() === midnight(new Date(next.startDate)).getTime() ? '' : fmtDay(new Date(alt.startDate)) + ' ');
   const status = sp.kind === 'full' && alt
-    ? `<span style="font-weight:600">Full – next with spaces: ${esc(meta(alt).name)}, ${altWhen}${fmtHTML(alt.startDate)}</span>`
+    ? `<span style="font-weight:600">Full / Waitlist · Next: ${esc(meta(alt).name)}, ${altWhen}${fmtHTML(alt.startDate)}</span>`
     : `<span style="font-weight:600${sp.kind === 'low' ? ';color:var(--time)' : ''}">${esc(spotsText(sp))}</span>`;
   const head = `<div class="h-label"><span class="h-rule"></span>Next up</div>
-    <div class="h-main"><span class="h-name" data-fit="${port ? 64 : 52}">${esc(m.name)}</span><span class="h-count${cdLen > 10 ? ' long' : ''}${new Date(next.startDate) - now <= 5 * 60000 ? ' pulse' : ''}">${cd}</span></div>`;
+    <div class="h-main"><span class="h-name" data-fit="${port ? 64 : 52}">${esc(m.name)}</span><span class="h-count${cdLen > 10 && cd !== 'Starting now' ? ' long' : ''}${new Date(next.startDate) - now <= 5 * 60000 ? ' pulse' : ''}">${cd}</span></div>`;
   if (port) return head +
     `<div class="h-detail d1" data-fit="24">${details(m, [start, time, zone])}</div>
      <div class="h-detail d2" data-fit="24">${details(m, [instr, status])}</div>`;
@@ -901,8 +912,8 @@ function render() {
   const screen = $('screen');
   const blank = mode === 'unavail' || mode === 'loading';
   screen.classList.toggle('is-unavail', blank);
-  $('u-1').textContent = mode === 'loading' ? 'Loading timetable…' : 'Schedule unavailable';
-  $('u-2').textContent = mode === 'loading' ? '' : 'Check the ATRIA app or ask reception for today’s classes.';
+  $('u-1').textContent = mode === 'loading' ? 'Loading timetable…' : 'Timetable unavailable';
+  $('u-2').textContent = mode === 'loading' ? '' : 'Check the ATRIA app for today’s classes.';
   /* Club closed (hours known): the Closed page replaces the schedule */
   /* A class running outside the listed hours (a late event) keeps the schedule up */
   const running = classes.some(c => new Date(c.startDate) <= now && now < new Date(c.endDate));
@@ -949,7 +960,7 @@ function render() {
   const t = performance.now(), settled = t - (render.drawn || 0) > 1500 / SPEED;
   render.drawn = t;
   const was = anim && settled ? rowRects(screen) : null;
-  const hero = $('hero'), heroKey = p.next ? p.next.startDate + meta(p.next).name : '';
+  const hero = $('hero'), heroKey = p.next ? rowKey(p.next) : '';
   let heroOld = null;
   if (anim && heroKey !== render.heroKey) {
     const c = document.createElement('div');
@@ -959,7 +970,7 @@ function render() {
   } else if (hero.classList.contains('h-in')) { hero.classList.remove('h-in'); clearTimeout(render.heroT); }   /* a redraw mid hand-over: don't play it again */
   const prevHero = render.heroKey;
   render.heroKey = heroKey; render.orient = orient;
-  const states = new Map(); p.todayShow.concat(p.mainShow).forEach(c => states.set(c.startDate + meta(c).name, state(c, now)));
+  const states = new Map(); p.todayShow.concat(p.mainShow).forEach(c => states.set(rowKey(c), state(c, now)));
   hero.innerHTML = heroHTML(p.next, now, port, p.alt);
   $('stage').classList.toggle('night', p.night);
   $('today-title').textContent = 'Today';   /* the date is already in the header */
