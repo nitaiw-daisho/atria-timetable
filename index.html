@@ -332,7 +332,8 @@ const LOW_SPOTS    = 5;
 const CACHE_MAX_H  = 24;             /* older saved schedules are not shown */
 const STALE_MINS   = 15;             /* "Live" turns to "Offline" if the last good fetch is older than this */
 const FETCH_SECS   = 10;             /* hard limit for a whole request, download included */
-const RELOAD_AT_H  = 3;              /* nightly self-reload (Brisbane hour) to pick up code changes */
+const UPDATE_MINS  = 5;              /* how often the screen checks the published page for code changes */
+const RELOAD_AT_H  = 3;              /* nightly self-reload (Brisbane hour), a backstop for the change check */
 const ROWS = { land: { today: 4, tomorrow: 3 }, port: { today: 6, tomorrow: 1 } };   /* portrait: Today first; the next day keeps one row */
 /* URL options: ?demo=1 sample data · ?portrait=1 / ?landscape=1 force orientation */
 const Q = new URLSearchParams(location.search);
@@ -889,6 +890,7 @@ function render() {
   if (mode === 'live' && now - savedAt > STALE_MINS * 60000) { mode = 'cache'; dirty = true; }
   if (!inFlight && Q.get('demo') !== '1' && Date.now() - lastAttempt > 2 * REFRESH_MINS * 60000) load();
   checkReload(now);
+  checkUpdate();
   /* header: cheap text updates only (keeps the Live pulse running smoothly) */
   $('clock').textContent = fmt(now);
   $('date').textContent = fmtLong(now);
@@ -1020,6 +1022,25 @@ async function checkReload(now) {
     await timed(signal => fetch(location.href, reqOpts(signal)).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }));
     location.reload();
   } catch (_) { /* try again in 10 min */ }
+}
+
+/* Reload soon after a new index.html is published. Every UPDATE_MINS the page downloads its own file (with a throwaway
+   query string, past any cache) and compares it with the first copy it saw. It reloads only when two downloads in a row
+   match each other and differ from that first copy, and both end in </html>: a half-uploaded file, a failed download,
+   or a host that adds something different to every reply never triggers a reload. */
+let pageSeen = null, pageNew = null, updateTry = 0;
+async function checkUpdate() {
+  if (Q.get('demo') === '1' || Date.now() - updateTry < UPDATE_MINS * 60000) return;
+  updateTry = Date.now();
+  try {
+    const u = new URL(location.href); u.searchParams.set('_check', Date.now());
+    const text = await timed(signal => fetch(u.href, reqOpts(signal)).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }));
+    if (!/<\/html>\s*$/i.test(text)) return;   /* cut short or still uploading */
+    if (pageSeen === null) { pageSeen = text; return; }
+    if (text === pageSeen) { pageNew = null; return; }
+    if (text === pageNew) location.reload();
+    else pageNew = text;   /* changed: reload if the next check finds the same file */
+  } catch (_) { /* try again next time */ }
 }
 
 function safeRender() { try { render(); } catch (e) { console.error('Render failed:', e); } }
