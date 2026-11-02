@@ -680,12 +680,12 @@ function plan(list, now, orient) {
   const day = c => midnight(new Date(c.startDate)).getTime();
   const upcoming = list.filter(c => new Date(c.endDate) > now);
   const next = upcoming.find(c => new Date(c.startDate) > now) || null;
-  const rest = upcoming.filter(c => c !== next);
-  const todayAll = rest.filter(c => day(c) === today);
+  /* Next up also stays in its place in the lists (tagged there), so the day reads in order with no gap */
+  const todayAll = upcoming.filter(c => day(c) === today);
   /* Second section: tomorrow, or the next day that has classes (weekends, public holidays) */
-  const ahead = rest.filter(c => day(c) > today);   /* not 'next': it is already in the hero */
+  const ahead = upcoming.filter(c => day(c) > today);
   const nextDay = ahead.length ? day(ahead[0]) : tomorrow;
-  const dayAll = rest.filter(c => day(c) === nextDay);
+  const dayAll = upcoming.filter(c => day(c) === nextDay);
   const dayDate = new Date(nextDay + 12 * 3600000);
   const isTom = nextDay === tomorrow;
   const dayWord = isTom ? 'Tomorrow' : fmtDay(dayDate);
@@ -731,9 +731,9 @@ function plan(list, now, orient) {
 const $ = id => document.getElementById(id);
 let orient = null;
 
-function rowHTML(c, now) {
+function rowHTML(c, now, next) {
   const m = meta(c), st = state(c, now), sp = spots(c);
-  const tag = st === 'now' ? '<span class="tag now">In progress</span>' : st === 'soon' ? `<span class="tag soon">In ${minsTo(c, now)} min</span>` : '';
+  const tag = st === 'now' ? '<span class="tag now">In progress</span>' : st === 'soon' ? `<span class="tag soon">In ${minsTo(c, now)} min</span>` : c === next ? '<span class="tag soon">Next up</span>' : '';
   const spHTML = sp.kind === 'open' ? `<div class="sp"></div>`
     : sp.kind === 'full' ? `<div class="sp state"><div class="big">FULL</div><div class="lbl">Waitlist</div></div>`
     : `<div class="sp ${sp.kind}"><div class="big">${sp.left}</div><div class="lbl">left</div></div>`;
@@ -748,13 +748,13 @@ function rowHTML(c, now) {
     ${spHTML}${prog}</div>`;
 }
 
-function trowHTML(c) {   /* landscape Tomorrow, narrow column */
+function trowHTML(c, next) {   /* landscape Tomorrow, narrow column */
   const m = meta(c), sp = spots(c);
   const right = sp.kind === 'open' ? '' : sp.kind === 'full' ? '<span class="big">Full</span><span class="unit">/ Waitlist</span>'
     : `<span class="big">${sp.left}</span><span class="unit">left</span>`;
   return `<div class="trow" data-k="${esc(rowKey(c))}">
     <div class="tr1"><span class="name" data-fit="24">${esc(m.name)}</span><span class="sp${sp.kind === 'low' || sp.kind === 'full' ? ' ' + sp.kind : ''}">${right}</span></div>
-    <div class="tr2" data-fit="24">${details(m, [`<span>${fmtHTML(c.startDate)}</span>`, `<span class="tdur">${dur(c)}</span>`])}</div>
+    <div class="tr2" data-fit="24">${details(m, [`<span>${fmtHTML(c.startDate)}</span>`, `<span class="tdur">${dur(c)}</span>`, c === next && '<span class="tag soon">Next up</span>'])}</div>
     <div class="tr3" data-fit="24">${dot(m.col)}${details(m, [m.zone && zoneHTML(m), m.instr && `<span class="in">${esc(m.instr)}</span>`])}</div>
   </div>`;
 }
@@ -976,15 +976,15 @@ function render() {
   $('today-title').textContent = 'Today';   /* the date is already in the header */
   $('today-more').textContent = p.todayMore;
   screen.classList.toggle('no-today', p.noToday);
-  $('today').innerHTML = p.todayShow.map(c => rowHTML(c, now)).join('');
+  $('today').innerHTML = p.todayShow.map(c => rowHTML(c, now, p.next)).join('');
   $('later-wrap').classList.toggle('off', !p.mainShow.length);
   screen.classList.toggle('one-day', p.oneDay);
   $('later-title').textContent = p.laterTitle;
-  $('later').innerHTML = p.mainShow.map(c => rowHTML(c, now)).join('');
+  $('later').innerHTML = p.mainShow.map(c => rowHTML(c, now, p.next)).join('');
   $('tom-title').textContent = p.sideTitle;
   $('tom-more').textContent = p.sideMore;
   $('later-more').textContent = p.laterMore;
-  $('tomorrow').innerHTML = p.sideShow.length ? p.sideShow.map(c => port ? rowHTML(c, now) : trowHTML(c)).join('')
+  $('tomorrow').innerHTML = p.sideShow.length ? p.sideShow.map(c => port ? rowHTML(c, now, p.next) : trowHTML(c, p.next)).join('')
     : msgHTML('No classes listed yet', 'Check back later');
   grow(port);
   fit(screen);
